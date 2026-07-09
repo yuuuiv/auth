@@ -2,8 +2,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
 import ssl
-from smtplib import SMTP, SMTP_SSL
-from urllib.parse import urlparse
+from smtplib import SMTP, SMTP_SSL, SMTPAuthenticationError
+from urllib.parse import unquote, urlparse
 
 from fastapi import HTTPException
 
@@ -19,6 +19,16 @@ _logger = logging.getLogger(__name__)
 class SmtpMailClient(MailClientBase):
 
     _type = "smtp"
+
+    @staticmethod
+    def _credentials(smtp_url_parts):
+        username = unquote(smtp_url_parts.username or "")
+        password = unquote(smtp_url_parts.password or "")
+        if not username:
+            raise ValueError("SMTP username is empty")
+        if not password:
+            raise ValueError("SMTP password is empty")
+        return username, password
 
     @staticmethod
     def _connect(smtp_url_parts):
@@ -49,15 +59,26 @@ class SmtpMailClient(MailClientBase):
     def send_verify_code(cls, email: str, code: str) -> None:
         try:
             smtp_url_parts = urlparse(settings.smtp_url)
+            username, password = cls._credentials(smtp_url_parts)
             with cls._connect(smtp_url_parts) as smtp:
-                smtp.login(smtp_url_parts.username, smtp_url_parts.password)
+                smtp.login(username, password)
                 message = MIMEMultipart()
-                message['From'] = smtp_url_parts.username
+                message['From'] = username
                 message['To'] = email
-                message['Subject'] = "AWSL Verify Code"
+                message['Subject'] = "Temp Mail Verify code (Temp Mail 验证码)"
                 message.attach(MIMEText(f"Your verify code is {code}", 'plain'))
-                smtp.sendmail(smtp_url_parts.username, email, message.as_string())
+                smtp.sendmail(username, email, message.as_string())
                 return
+        except SMTPAuthenticationError as e:
+            _logger.error(f"Failed to authenticate SMTP user: {e.smtp_code} {e.smtp_error!r}")
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Failed to send verify code: SMTP authentication failed "
+                    f"({e.smtp_code}, {e.smtp_error!r}). Check smtp_url username, "
+                    "password/authorization code, and URL-encode special characters."
+                )
+            )
         except Exception as e:
             _logger.error(f"Failed to send verify code: {e}")
             raise HTTPException(
