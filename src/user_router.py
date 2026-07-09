@@ -13,6 +13,7 @@ from src.cf_turnstile import CloudFlareTurnstile
 from src.db.base import DBClientBase
 from src.email.base import MailClientBase
 from src.cache.base import TokenClientBase
+from src.temp_mail_bridge import try_sync_temp_mail_user
 
 router = APIRouter()
 _logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ def login(email_user: EmailUser):
         user_email=email_user.email,
         password=email_user.password,
     ))
+    try_sync_temp_mail_user(email_user.email, email_user.password)
     code = uuid.uuid4().hex
     token_client.store_token(f"email_login:{code}", email_user.email, settings.token_code_expire_seconds)
     return {
@@ -107,6 +109,7 @@ def register(email_user: EmailUser):
         user_email=email_user.email,
         password=email_user.password,
     ))
+    try_sync_temp_mail_user(email_user.email, email_user.password)
     return {
         "status": "OK"
     }

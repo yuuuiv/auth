@@ -70,10 +70,16 @@ The bundled frontend now uses `/user` as the post-login user-info page. The old 
 enabled_db=false
 cors_allow_origins=http://localhost:5173,https://mail.cerise-bouquet.xyz,https://fd2a0955.temp-mail-30o.pages.dev,https://你的-temp-mail-前端域名
 supabase_api_url=
+# 后端专用。若 Supabase 表启用了 RLS，推荐填 service_role key；不要把它放到前端环境变量里。
 supabase_api_key=
 
 upstash_api_url=
 upstash_api_token=
+
+# 可选：用于把统一账户同步到 Temp Mail Worker，并代理用户邮箱列表/新建邮箱。
+# temp_mail_admin_auth 是 Worker 管理员密码明文，只放 Vercel 后端，不要放前端。
+temp_mail_api_base=https://你的-temp-mail-worker
+temp_mail_admin_auth=
 
 enabled_smtp=false
 # 推荐隐式 SSL：smtps://username:passwd@smtp.xxxx.com:465

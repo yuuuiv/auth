@@ -12,6 +12,7 @@ from src.auth_router import router as auth_router
 from src.info_router import router as info_router
 from src.user_router import router as user_router
 from src.health_check_router import router as health_check_router
+from src.temp_mail_router import router as temp_mail_router
 
 
 _logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ app.include_router(auth_router)
 app.include_router(info_router)
 app.include_router(user_router)
 app.include_router(health_check_router)
+app.include_router(temp_mail_router)
 
 if os.path.exists("dist"):
 

@@ -10,6 +10,7 @@ from models import OauthBody, TokenBody
 from src.auth import AuthClientBase
 from src.db.base import DBClientBase
 from src.cache.base import TokenClientBase
+from src.temp_mail_bridge import try_sync_temp_mail_user
 
 router = APIRouter()
 _logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ def oauth(oauth_body: OauthBody):
     if settings.enabled_db:
         db_client = DBClientBase.get_client()
         db_client.update_oauth_user(user)
+    try_sync_temp_mail_user(user.user_email or user.user_name)
     return {
         "redirect_url": app_settings.redirect_url,
         "code": code

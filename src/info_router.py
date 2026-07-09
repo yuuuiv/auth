@@ -7,6 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
 from models import User
+from src.temp_mail_bridge import is_configured as temp_mail_bridge_configured
 
 router = APIRouter()
 security = HTTPBearer()
@@ -22,6 +23,7 @@ def auth_settings():
         "enabled_ms": bool(settings.ms_client_id),
         "enabled_web3": settings.enabled_web3_client,
         "cf_turnstile_site_key": settings.cf_turnstile_site_key,
+        "temp_mail_bridge_enabled": temp_mail_bridge_configured(),
     }
 
 

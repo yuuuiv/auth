@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # app settings
     app_settings: Dict[str, AppSettings] = Field(default={}, exclude=True)
 
+    # temp-mail worker bridge, backend only
+    temp_mail_api_base: str = ""
+    temp_mail_admin_auth: str = Field(default="", exclude=True)
+
     @field_validator('app_settings')
     def convert_app_settings(cls, values: Dict[str, AppSettings]):
         return {
