@@ -26,7 +26,13 @@ class Settings(BaseSettings):
     )
 
     debug: bool = False
-    cors_allow_origins: str = "http://localhost:5173,http://localhost,http://127.0.0.1"
+    cors_allow_origins: str = (
+        "http://localhost:5173,"
+        "http://localhost,"
+        "http://127.0.0.1,"
+        "https://mail.cerise-bouquet.xyz,"
+        "https://fd2a0955.temp-mail-30o.pages.dev"
+    )
 
     # token settings
     cache_client_type: str = "upstash"

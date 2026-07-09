@@ -68,7 +68,7 @@ The bundled frontend now uses `/user` as the post-login user-info page. The old 
 
 ```dotenv
 enabled_db=false
-cors_allow_origins=http://localhost:5173,https://你的-temp-mail-前端域名
+cors_allow_origins=http://localhost:5173,https://mail.cerise-bouquet.xyz,https://fd2a0955.temp-mail-30o.pages.dev,https://你的-temp-mail-前端域名
 supabase_api_url=
 supabase_api_key=
 
