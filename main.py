@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 
+from config import settings
 from src.auth_router import router as auth_router
 from src.info_router import router as info_router
 from src.user_router import router as user_router

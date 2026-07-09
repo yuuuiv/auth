@@ -17,10 +17,17 @@ class SupabaseRestClient(DBClientBase):
 
     _type = "supabase_rest"
 
+    @staticmethod
+    def _rest_base_url() -> str:
+        base = settings.supabase_api_url.rstrip("/")
+        if base.endswith("/rest/v1"):
+            return base
+        return f"{base}/rest/v1"
+
     @classmethod
     def login_user(cls, user: User) -> bool:
         res = requests.get(
-            f"{settings.supabase_api_url}/rest/v1/awsl_users?user_email=eq.{user.user_email}",
+            f"{cls._rest_base_url()}/awsl_users?user_email=eq.{user.user_email}",
             headers={
                 "apikey": settings.supabase_api_key,
                 "Authorization": f"Bearer {settings.supabase_api_key}",
@@ -51,7 +58,7 @@ class SupabaseRestClient(DBClientBase):
     @classmethod
     def register_user(cls, user: User) -> bool:
         res = requests.post(
-            f"{settings.supabase_api_url}/rest/v1/awsl_users?on_conflict=user_email",
+            f"{cls._rest_base_url()}/awsl_users?on_conflict=user_email",
             json={
                 "user_name": user.user_name,
                 "user_email": user.user_email,
@@ -75,7 +82,7 @@ class SupabaseRestClient(DBClientBase):
     @classmethod
     def update_oauth_user(cls, user: User) -> bool:
         res = requests.post(
-            f"{settings.supabase_api_url}/rest/v1/awsl_oauth_users?on_conflict=login_type,user_email",
+            f"{cls._rest_base_url()}/awsl_oauth_users?on_conflict=login_type,user_email",
             json={
                 "login_type": user.login_type,
                 "user_name": user.user_name,
