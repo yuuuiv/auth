@@ -42,7 +42,8 @@ export function GlobalProvider(
     const { apiFetch } = UseApiClient()
     const [isLoading, setIsLoading] = useState(false);
     const [appIdSession, setAppIdSession] = useState<string>(
-        () => (sessionStorage.getItem("appIdSession")) || "demo"
+        () => (new URLSearchParams(window.location.search).get("app_id")) ||
+            (sessionStorage.getItem("appIdSession")) || "demo"
     )
     const [jwtSession, setJwtSession] = useState<string>(
         () => (sessionStorage.getItem("jwtSession")) || ""
@@ -50,6 +51,8 @@ export function GlobalProvider(
     const [settings, setSettings] = useState<GlobalSettings>({} as GlobalSettings)
 
     useEffect(() => {
+        const appId = new URLSearchParams(window.location.search).get("app_id");
+        if (appId) sessionStorage.setItem("appIdSession", appId);
         const fetchSettings = async () => {
             try {
                 const settings_res = await apiFetch<GlobalSettings>('/api/settings');

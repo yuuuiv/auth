@@ -20,7 +20,7 @@ services:
       - redis_url=redis://awsl-auth-redis:6379/0
       # 邮件注册
       - enabled_smtp=false
-      # - smtp_url=smtp://username:passwd@smtp.xxxx.com:587
+      # - smtp_url=smtps://username:passwd@smtp.xxxx.com:465
       # 邮件注册人机验证
       # - cf_turnstile_site_key=
       # - cf_turnstile_secret_key=

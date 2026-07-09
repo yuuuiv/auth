@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -187,4 +188,79 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.527 0.154 150.069);
+}
+
+/* Temp Mail / Steel Slate theme overrides */
+:root {
+  --radius: 0.75rem;
+  --background: #eef1ef;
+  --foreground: #1c2321;
+  --card: #ffffff;
+  --card-foreground: #1c2321;
+  --popover: #ffffff;
+  --popover-foreground: #1c2321;
+  --primary: #4d6b76;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f4f3;
+  --secondary-foreground: #414852;
+  --muted: #e6ebe9;
+  --muted-foreground: #5e6572;
+  --accent: #e9edec;
+  --accent-foreground: #1c2321;
+  --destructive: #b4453a;
+  --border: #d6dcda;
+  --input: #b9c2c4;
+  --ring: #7d98a1;
+  --sidebar: #e6ebe9;
+  --sidebar-foreground: #1c2321;
+  --sidebar-primary: #4d6b76;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9edec;
+  --sidebar-accent-foreground: #1c2321;
+  --sidebar-border: #d6dcda;
+  --sidebar-ring: #7d98a1;
+}
+
+.dark {
+  --background: #141a19;
+  --foreground: #eef1ef;
+  --card: #222b29;
+  --card-foreground: #eef1ef;
+  --popover: #222b29;
+  --popover-foreground: #eef1ef;
+  --primary: #8fabb4;
+  --primary-foreground: #141a19;
+  --secondary: #1a2120;
+  --secondary-foreground: #cdd5d3;
+  --muted: #171d1c;
+  --muted-foreground: #a9b4c2;
+  --accent: #2a3533;
+  --accent-foreground: #eef1ef;
+  --destructive: #e08078;
+  --border: #303b39;
+  --input: #45524f;
+  --ring: #8fabb4;
+  --sidebar: #171d1c;
+  --sidebar-foreground: #eef1ef;
+  --sidebar-primary: #8fabb4;
+  --sidebar-primary-foreground: #141a19;
+  --sidebar-accent: #2a3533;
+  --sidebar-accent-foreground: #eef1ef;
+  --sidebar-border: #303b39;
+  --sidebar-ring: #8fabb4;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(125, 152, 161, 0.16), transparent 60%),
+    var(--background);
+}
+
+h1, h2, h3, .font-bold {
+  font-family: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+code, pre, input[type="email"] {
+  font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Code', monospace;
 }

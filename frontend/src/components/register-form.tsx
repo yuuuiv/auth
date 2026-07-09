@@ -54,18 +54,15 @@ export function RegisterForm({
             return;
         }
         try {
-            // const res = await apiFetch<{
-            //     timeout: number
-            // }>(`/api/email/verify_code`, {
-            //     method: "POST",
-            //     body: JSON.stringify({
-            //         email: email,
-            //         cf_token: token
-            //     })
-            // });
-            const res = {
-                timeout: 120
-            }
+            const res = await apiFetch<{
+                timeout: number
+            }>(`/api/email/verify_code`, {
+                method: "POST",
+                body: JSON.stringify({
+                    email: email,
+                    cf_token: token
+                })
+            });
             if (res && res.timeout) {
                 toast.success(`验证码已发送, 有效期 ${res.timeout} 秒`);
                 setVerifyCodeTimeout(res.timeout);

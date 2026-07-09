@@ -57,8 +57,10 @@ config `app_id` `app_secret` `redirect_url` in `.env` or ENV.
                 'Authorization': `Bearer ${jwtSession.value}`,
                 'Content-Type': 'application/json',
             }
-        });
+     });
      ```
+
+The bundled frontend now uses `/user` as the post-login user-info page. The old `/demo` route is still kept as a compatibility alias.
 
 ## Deloy
 
@@ -66,6 +68,7 @@ config `app_id` `app_secret` `redirect_url` in `.env` or ENV.
 
 ```dotenv
 enabled_db=false
+cors_allow_origins=http://localhost:5173,https://你的-temp-mail-前端域名
 supabase_api_url=
 supabase_api_key=
 
@@ -73,7 +76,9 @@ upstash_api_url=
 upstash_api_token=
 
 enabled_smtp=false
-smtp_url=smtp://username:passwd@smtp.xxxx.com:587
+# 推荐隐式 SSL：smtps://username:passwd@smtp.xxxx.com:465
+# 也支持 smtp://username:passwd@smtp.xxxx.com:587，但服务端必须支持 STARTTLS
+smtp_url=smtps://username:passwd@smtp.xxxx.com:465
 
 cf_turnstile_site_key=
 cf_turnstile_secret_key=
@@ -116,6 +121,9 @@ services:
       - redis_url=redis://awsl-auth-redis:6379/0
       # 邮件注册
       - enabled_smtp=false
+      # 推荐隐式 SSL：
+      # - smtp_url=smtps://username:passwd@smtp.xxxx.com:465
+      # 也支持 STARTTLS：
       # - smtp_url=smtp://username:passwd@smtp.xxxx.com:587
       # 邮件注册人机验证
       # - cf_turnstile_site_key=

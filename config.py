@@ -21,6 +21,7 @@ class AppSettings(BaseModel):
 class Settings(BaseSettings):
 
     debug: bool = False
+    cors_allow_origins: str = "http://localhost:5173,http://localhost,http://127.0.0.1"
 
     # token settings
     cache_client_type: str = "upstash"
@@ -64,6 +65,13 @@ class Settings(BaseSettings):
             app_settings.app_id: app_settings
             for _, app_settings in values.items()
         }
+
+    def get_cors_allow_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_allow_origins.split(",")
+            if origin.strip()
+        ]
 
     class Config:
         env_file = ".env"

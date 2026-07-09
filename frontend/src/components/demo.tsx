@@ -38,7 +38,7 @@ export function Demo({
                     toast.error((error as Error).message || "登录失败");
                     return;
                 }
-                window.location.href = "/demo";
+                window.location.href = "/user";
                 return;
             }
             try {

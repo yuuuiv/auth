@@ -7,7 +7,12 @@ export function SiteHeader() {
     return (
         <header className="border-grid sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center mx-auto sm:justify-between sm:space-x-0">
-                <span className="inline-block font-bold">Awsl Auth</span>
+                <span className="inline-flex items-center gap-2 font-bold">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                        ✉
+                    </span>
+                    Temp Mail Auth
+                </span>
                 <div className="flex flex-1 items-center justify-end space-x-4">
                     <nav className="flex items-center space-x-1">
                         <Button

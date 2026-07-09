@@ -56,7 +56,7 @@ export function Callback({
                     window.location.href = url.href;
                     return;
                 }
-                navigate(`/demo?code=${code}`);
+                navigate(`/user?code=${code}`);
             } catch (error) {
                 setFailed(true);
                 toast.error(`登录失败 ${(error as Error).message}`);
