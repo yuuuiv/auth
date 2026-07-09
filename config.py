@@ -2,7 +2,7 @@ import logging
 from typing import Dict
 
 from pydantic import BaseModel, Field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logging.basicConfig(
     format="%(asctime)s: %(levelname)s: %(name)s: %(message)s",
@@ -19,6 +19,11 @@ class AppSettings(BaseModel):
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_nested_delimiter="__",
+        extra="ignore",
+    )
 
     debug: bool = False
     cors_allow_origins: str = "http://localhost:5173,http://localhost,http://127.0.0.1"
@@ -66,17 +71,20 @@ class Settings(BaseSettings):
             for _, app_settings in values.items()
         }
 
+    @field_validator('debug', mode='before')
+    def parse_debug(cls, value):
+        if isinstance(value, str) and value.lower() in {
+            "release", "prod", "production", "vercel", "none", ""
+        }:
+            return False
+        return value
+
     def get_cors_allow_origins(self) -> list[str]:
         return [
             origin.strip()
             for origin in self.cors_allow_origins.split(",")
             if origin.strip()
         ]
-
-    class Config:
-        env_file = ".env"
-        env_nested_delimiter = "__"
-
 
 settings = Settings()
 _logger.info(f"settings: {settings.model_dump_json(indent=2)}")

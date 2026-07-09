@@ -29,6 +29,13 @@ export function LoginForm({
     const [password, setPassword] = useState<string>("")
     const [showPassword, setShowPassword] = useState(false);
     const { settings } = useGlobal();
+    const hasOauthProvider = Boolean(
+        settings.enabled_github ||
+        settings.enabled_google ||
+        settings.enabled_ms ||
+        (settings.enabled_web3 && window.ethereum)
+    );
+    const hasAnyLogin = hasOauthProvider || Boolean(settings.enabled_smtp);
 
     const onOauthLogin = async (logintype: LoginType) => {
         try {
@@ -93,6 +100,17 @@ export function LoginForm({
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-6">
+                        {settings.error && (
+                            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                                Auth 后端不可用：{settings.error}
+                            </div>
+                        )}
+                        {!settings.error && !hasAnyLogin && (
+                            <div className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">
+                                当前没有启用的登录方式。请检查 Vercel 环境变量：
+                                github_client_id、google_client_id、enabled_db、enabled_smtp。
+                            </div>
+                        )}
                         <div className="flex flex-col gap-4">
                             {settings.enabled_github && <Button variant="outline" className="w-full"
                                 onClick={() => onOauthLogin("github")}>

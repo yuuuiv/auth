@@ -32,6 +32,7 @@ type GlobalSettings = {
     enabled_ms: boolean | undefined
     enabled_web3: boolean | undefined
     cf_turnstile_site_key: string | undefined
+    error?: string
 }
 
 const GlobalContext = createContext<GlobalProviderState>(initialState)
@@ -58,7 +59,12 @@ export function GlobalProvider(
                 const settings_res = await apiFetch<GlobalSettings>('/api/settings');
                 setSettings(settings_res);
             } catch (err) {
-                toast.error((err as Error).message || "获取设置失败");
+                const message = (err as Error).message || "获取设置失败";
+                toast.error(message);
+                setSettings((prev) => ({
+                    ...prev,
+                    error: message,
+                }))
             } finally {
                 setSettings((prev) => ({
                     ...prev,
