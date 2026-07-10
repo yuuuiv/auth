@@ -117,6 +117,20 @@ def get_address_jwt(email: str, address_id: int) -> dict[str, Any]:
     return _request("GET", f"/admin/show_password/{address_id}")
 
 
+def get_address_forwarding_rules(email: str, address_id: int) -> dict[str, Any]:
+    get_address_jwt(email, address_id)
+    return _request("GET", f"/admin/address_forwarding_rules/{address_id}")
+
+
+def save_address_forwarding_rules(email: str, address_id: int, rules: list[dict[str, Any]]) -> dict[str, Any]:
+    get_address_jwt(email, address_id)
+    return _request(
+        "POST",
+        f"/admin/address_forwarding_rules/{address_id}",
+        json={"rules": rules},
+    )
+
+
 def create_bound_address(email: str, payload: dict[str, Any]) -> dict[str, Any]:
     user = sync_temp_mail_user(email)
     if not user:

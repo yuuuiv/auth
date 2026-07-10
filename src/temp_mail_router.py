@@ -11,8 +11,10 @@ from src.temp_mail_bridge import (
     bind_verified_address_jwt,
     create_bound_address,
     get_address_jwt,
+    get_address_forwarding_rules,
     get_bound_addresses,
     list_user_mails,
+    save_address_forwarding_rules,
     sync_temp_mail_user,
 )
 
@@ -80,6 +82,19 @@ def addresses(user: User = Depends(current_user)):
 @router.get("/api/temp-mail/address_jwt/{address_id}", tags=["Temp Mail"])
 def address_jwt(address_id: int, user: User = Depends(current_user)):
     return get_address_jwt(user_email(user), address_id)
+
+
+@router.get("/api/temp-mail/address_forwarding_rules/{address_id}", tags=["Temp Mail"])
+def address_forwarding_rules(address_id: int, user: User = Depends(current_user)):
+    return get_address_forwarding_rules(user_email(user), address_id)
+
+
+@router.post("/api/temp-mail/address_forwarding_rules/{address_id}", tags=["Temp Mail"])
+def save_address_rules(address_id: int, payload: dict = Body(default={}), user: User = Depends(current_user)):
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        raise HTTPException(status_code=400, detail="rules 必须是数组")
+    return save_address_forwarding_rules(user_email(user), address_id, rules)
 
 
 @router.post("/api/temp-mail/new_address", tags=["Temp Mail"])
