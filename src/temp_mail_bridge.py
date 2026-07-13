@@ -138,7 +138,9 @@ def delete_address_mail(email: str, address_id: int, mail_id: int) -> dict[str, 
     return _request(
         "DELETE",
         f"/api/mails/{mail_id}",
-        headers={"x-user-token": credential},
+        # /api/* is protected by the Worker JWT middleware, which reads the
+        # standard Bearer credential. x-user-token is only used by /user_api.
+        headers={"Authorization": f"Bearer {credential}"},
     )
 
 
