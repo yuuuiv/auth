@@ -10,10 +10,12 @@ from models import User
 from src.temp_mail_bridge import (
     bind_verified_address_jwt,
     create_bound_address,
+    delete_address_mail,
     get_address_jwt,
     get_address_forwarding_rules,
     get_bound_addresses,
     list_user_mails,
+    list_user_sendbox,
     save_address_forwarding_rules,
     sync_temp_mail_user,
 )
@@ -97,6 +99,11 @@ def save_address_rules(address_id: int, payload: dict = Body(default={}), user: 
     return save_address_forwarding_rules(user_email(user), address_id, rules)
 
 
+@router.delete("/api/temp-mail/address_mail/{address_id}/{mail_id}", tags=["Temp Mail"])
+def delete_mail(address_id: int, mail_id: int, user: User = Depends(current_user)):
+    return delete_address_mail(user_email(user), address_id, mail_id)
+
+
 @router.post("/api/temp-mail/new_address", tags=["Temp Mail"])
 def new_address(payload: dict = Body(default={}), user: User = Depends(current_user)):
     return create_bound_address(user_email(user), payload)
@@ -118,3 +125,13 @@ def mails(
     user: User = Depends(current_user),
 ):
     return list_user_mails(user_email(user), limit, offset, address)
+
+
+@router.get("/api/temp-mail/sendbox", tags=["Temp Mail"])
+def sendbox(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    address: str = "",
+    user: User = Depends(current_user),
+):
+    return list_user_sendbox(user_email(user), limit, offset, address)

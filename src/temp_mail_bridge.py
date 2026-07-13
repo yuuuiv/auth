@@ -131,6 +131,17 @@ def save_address_forwarding_rules(email: str, address_id: int, rules: list[dict[
     )
 
 
+def delete_address_mail(email: str, address_id: int, mail_id: int) -> dict[str, Any]:
+    credential = get_address_jwt(email, address_id).get("jwt")
+    if not credential:
+        raise HTTPException(status_code=400, detail="未获取到邮箱凭证")
+    return _request(
+        "DELETE",
+        f"/api/mails/{mail_id}",
+        headers={"x-user-token": credential},
+    )
+
+
 def create_bound_address(email: str, payload: dict[str, Any]) -> dict[str, Any]:
     user = sync_temp_mail_user(email)
     if not user:
@@ -225,6 +236,28 @@ def list_user_mails(email: str, limit: int, offset: int, address: str = "") -> d
         "count": total_count,
         "results": all_results[offset:offset + limit],
     }
+
+
+def list_user_sendbox(email: str, limit: int, offset: int, address: str = "") -> dict[str, Any]:
+    _user, addresses = get_bound_addresses(email)
+    allowed_addresses = [row.get("name") or row.get("address") for row in addresses]
+    allowed_addresses = [item for item in allowed_addresses if item]
+    if address:
+        if address not in set(allowed_addresses):
+            raise HTTPException(status_code=403, detail="该邮箱地址不属于当前用户")
+        return _request("GET", "/admin/sendbox", params={"limit": limit, "offset": offset, "address": address})
+    if not allowed_addresses:
+        return {"count": 0, "results": []}
+
+    all_results: list[dict[str, Any]] = []
+    total_count = 0
+    for item in allowed_addresses:
+        data = _request("GET", "/admin/sendbox", params={"limit": min(limit + offset, 100), "offset": 0, "address": item})
+        if isinstance(data, dict):
+            total_count += int(data.get("count") or 0)
+            all_results.extend(data.get("results") or [])
+    all_results.sort(key=lambda row: (str(row.get("created_at") or ""), int(row.get("id") or 0)), reverse=True)
+    return {"count": total_count, "results": all_results[offset:offset + limit]}
 
 
 def try_sync_temp_mail_user(email: str, password_hash: str | None = None) -> None:
