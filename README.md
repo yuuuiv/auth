@@ -2,7 +2,7 @@
 
 🔐 轻量级、自托管的统一认证网关。一行配置即可为你的任意应用接入 **GitHub / Google / Microsoft / Web3 钱包 / 邮箱验证码** 等多种登录方式，返回标准 JWT，开箱即用。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/dreamhunter2333/awsl-auth)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yuuuiv/auth)
 
 ---
 
