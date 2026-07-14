@@ -22,7 +22,7 @@ export function SiteHeader() {
                             className="h-8 w-8 px-0"
                         >
                             <a
-                                href="https://github.com/dreamhunter2333/awsl-auth"
+                                href="https://github.com/yuuuiv/auth"
                                 target="_blank"
                                 rel="noreferrer"
                             >
