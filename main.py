@@ -17,7 +17,7 @@ from src.temp_mail_router import router as temp_mail_router
 
 _logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Awsl Auth")
+app = FastAPI(title="Auth")
 
 app.add_middleware(
     CORSMiddleware,
