@@ -202,17 +202,42 @@ def bind_verified_address_jwt(email: str, address_jwt: str) -> dict[str, Any]:
 
 def list_user_mails(email: str, limit: int, offset: int, address: str = "") -> dict[str, Any]:
     _user, addresses = get_bound_addresses(email)
-    allowed_addresses = [row.get("name") or row.get("address") for row in addresses]
-    allowed_addresses = [item for item in allowed_addresses if item]
-    allowed_set = set(allowed_addresses)
-    if address:
-        if address not in allowed_set:
-            raise HTTPException(status_code=403, detail="该邮箱地址不属于当前用户")
+    address_rows = [
+        row for row in addresses
+        if row.get("id") is not None and (row.get("name") or row.get("address"))
+    ]
+    allowed_addresses = [row.get("name") or row.get("address") for row in address_rows]
+    rows_by_address = {
+        row.get("name") or row.get("address"): row
+        for row in address_rows
+    }
+
+    def list_parsed_mail(row: dict[str, Any], page_limit: int, page_offset: int) -> dict[str, Any]:
+        """Use the address JWT and the Worker's parsed endpoint.
+
+        /admin/mails returns complete raw RFC822 messages.  Returning those to
+        the browser forced it to parse every message before a mailbox switch
+        could render.  /api/parsed_mails keeps that work at the Worker and
+        returns the small, already parsed representation instead.
+        """
+        # ``row`` came from get_bound_addresses above, so ownership has already
+        # been checked. Avoid calling get_address_jwt here: it would fetch the
+        # same binding list once more for every mailbox switch.
+        credential = _request("GET", f"/admin/show_password/{int(row['id'])}").get("jwt")
+        if not credential:
+            raise HTTPException(status_code=400, detail="未获取到邮箱凭证")
         return _request(
             "GET",
-            "/admin/mails",
-            params={"limit": limit, "offset": offset, "address": address},
+            "/api/parsed_mails",
+            params={"limit": page_limit, "offset": page_offset},
+            headers={"Authorization": f"Bearer {credential}"},
         )
+
+    if address:
+        row = rows_by_address.get(address)
+        if not row:
+            raise HTTPException(status_code=403, detail="该邮箱地址不属于当前用户")
+        return list_parsed_mail(row, limit, offset)
 
     if not allowed_addresses:
         return {"count": 0, "results": []}
@@ -220,12 +245,8 @@ def list_user_mails(email: str, limit: int, offset: int, address: str = "") -> d
     fetch_limit = min(max(limit + offset, limit), 100)
     all_results: list[dict[str, Any]] = []
     total_count = 0
-    for item in allowed_addresses:
-        data = _request(
-            "GET",
-            "/admin/mails",
-            params={"limit": fetch_limit, "offset": 0, "address": item},
-        )
+    for row in address_rows:
+        data = list_parsed_mail(row, fetch_limit, 0)
         if isinstance(data, dict):
             total_count += int(data.get("count") or 0)
             all_results.extend(data.get("results") or [])
