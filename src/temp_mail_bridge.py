@@ -156,10 +156,65 @@ def send_address_mail(email: str, address_id: int, payload: dict[str, Any]) -> d
     )
 
 
+def _ensure_worker_user_address_limit() -> None:
+    target = max(0, int(settings.temp_mail_user_max_address_count or 0))
+    if target <= 0:
+        return
+    current = _request("GET", "/admin/user_settings")
+    if not isinstance(current, dict):
+        return
+    current_limit = int(current.get("maxAddressCount") or 0)
+    # Worker uses 0 as unlimited. Never replace an unlimited or already higher
+    # administrator setting with the bridge default.
+    if current_limit == 0 or current_limit >= target:
+        return
+    _request(
+        "POST",
+        "/admin/user_settings",
+        json={**current, "maxAddressCount": target},
+    )
+
+
+def _ensure_account_send_balance(address_jwt: str, address: str) -> None:
+    balance = max(0, int(settings.temp_mail_account_send_balance or 0))
+    if not address_jwt or not address or balance <= 0:
+        return
+    try:
+        # This creates the sender row when it does not exist. The admin endpoint
+        # can then update the concrete row to the account-specific balance.
+        _request(
+            "POST",
+            "/api/request_send_mail_access",
+            headers={"Authorization": f"Bearer {address_jwt}"},
+        )
+        result = _request(
+            "GET",
+            "/admin/address_sender",
+            params={"limit": 20, "offset": 0, "address": address},
+        )
+        rows = result.get("results", []) if isinstance(result, dict) else []
+        sender = next((row for row in rows if row.get("id") is not None), None)
+        if not sender:
+            raise RuntimeError("Worker 未创建 address_sender 记录")
+        _request(
+            "POST",
+            "/admin/address_sender",
+            json={
+                "address_id": sender["id"],
+                "address": address,
+                "enabled": True,
+                "balance": balance,
+            },
+        )
+    except Exception as exc:
+        _logger.warning("Failed to initialize account send balance for %s: %s", address, exc)
+
+
 def create_bound_address(email: str, payload: dict[str, Any]) -> dict[str, Any]:
     user = sync_temp_mail_user(email)
     if not user:
         raise HTTPException(status_code=400, detail="Temp Mail 用户同步失败")
+    _ensure_worker_user_address_limit()
     data = _request(
         "POST",
         "/admin/new_address",
@@ -173,10 +228,24 @@ def create_bound_address(email: str, payload: dict[str, Any]) -> dict[str, Any]:
     address_id = data.get("address_id") if isinstance(data, dict) else None
     if not address_id:
         raise HTTPException(status_code=400, detail="Temp Mail Worker 未返回 address_id")
-    _request(
-        "POST",
-        "/admin/users/bind_address",
-        json={"user_id": user["id"], "address_id": address_id},
+    try:
+        _request(
+            "POST",
+            "/admin/users/bind_address",
+            json={"user_id": user["id"], "address_id": address_id},
+        )
+    except Exception:
+        # /admin/new_address and /admin/users/bind_address are separate Worker
+        # operations. Roll the first one back if binding fails (for example,
+        # when the user's address limit is reached) to avoid orphan addresses.
+        try:
+            _request("DELETE", f"/admin/delete_address/{address_id}")
+        except Exception as cleanup_exc:
+            _logger.warning("Failed to remove unbound address %s: %s", address_id, cleanup_exc)
+        raise
+    _ensure_account_send_balance(
+        str(data.get("jwt") or ""),
+        str(data.get("address") or ""),
     )
     return data
 
@@ -196,6 +265,7 @@ def bind_verified_address_jwt(email: str, address_jwt: str) -> dict[str, Any]:
     user = sync_temp_mail_user(email)
     if not user:
         raise HTTPException(status_code=400, detail="Temp Mail 用户同步失败")
+    _ensure_worker_user_address_limit()
     _request(
         "POST",
         "/open_api/credential_login",
@@ -205,11 +275,19 @@ def bind_verified_address_jwt(email: str, address_jwt: str) -> dict[str, Any]:
     address_id = payload.get("address_id")
     if not address_id:
         raise HTTPException(status_code=400, detail="地址凭证缺少 address_id")
-    return _request(
+    _, bound_addresses = get_bound_addresses(email)
+    already_bound = any(
+        int(row.get("id") or 0) == int(address_id)
+        for row in bound_addresses
+    )
+    result = _request(
         "POST",
         "/admin/users/bind_address",
         json={"user_id": user["id"], "address_id": address_id},
     )
+    if not already_bound:
+        _ensure_account_send_balance(address_jwt, str(payload.get("address") or ""))
+    return result
 
 
 def list_user_mails(email: str, limit: int, offset: int, address: str = "") -> dict[str, Any]:

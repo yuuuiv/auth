@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     # temp-mail worker bridge, backend only
     temp_mail_api_base: str = ""
     temp_mail_admin_auth: str = Field(default="", exclude=True)
+    temp_mail_user_max_address_count: int = 50
+    temp_mail_account_send_balance: int = 10
 
     @field_validator('app_settings')
     def convert_app_settings(cls, values: Dict[str, AppSettings]):

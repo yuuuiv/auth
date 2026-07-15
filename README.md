@@ -364,6 +364,8 @@ upstash_api_token=
 # ========== 临时邮箱桥接 (可选) ==========
 temp_mail_api_base=https://你的-temp-mail-worker
 temp_mail_admin_auth=                 # Worker 管理员密码，仅放后端
+temp_mail_user_max_address_count=50   # 统一账户默认可绑定邮箱上限；更高值可由管理员在控制台调整
+temp_mail_account_send_balance=10     # 临时邮箱首次绑定统一账户时设置的发信额度
 
 # ========== SMTP 邮箱服务 ==========
 enabled_smtp=false

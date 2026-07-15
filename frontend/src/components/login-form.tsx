@@ -32,8 +32,7 @@ export function LoginForm({
     const hasOauthProvider = Boolean(
         settings.enabled_github ||
         settings.enabled_google ||
-        settings.enabled_ms ||
-        (settings.enabled_web3 && window.ethereum)
+        settings.enabled_ms
     );
     const hasAnyLogin = hasOauthProvider || Boolean(settings.enabled_smtp);
 
@@ -52,18 +51,6 @@ export function LoginForm({
             toast.error((error as Error).message || "登录失败");
         }
     };
-
-    const isEnableWeb3 = settings.enabled_web3 && window.ethereum;
-    const web3Login = async () => {
-        if (!window.ethereum) return;
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accounts.length <= 0) {
-            toast.error("请安装 MetaMask");
-            return;
-        }
-        const account = accounts[0];
-        navigate(`/callback/web3?web3_account=${account}`);
-    }
 
     const emailLogin = async () => {
         if (!email || !password) {
@@ -114,23 +101,22 @@ export function LoginForm({
                         <div className="flex flex-col gap-4">
                             {settings.enabled_github && <Button variant="outline" className="w-full"
                                 onClick={() => onOauthLogin("github")}>
-                                <Icons.github />
-                                Github 登录
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-[#181717] shadow-sm">
+                                    <Icons.github className="h-4 w-4" />
+                                </span>
+                                GitHub 登录
                             </Button>}
                             {settings.enabled_google && <Button variant="outline" className="w-full"
                                 onClick={() => onOauthLogin("google")}>
-                                <Icons.google />
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white shadow-sm">
+                                    <Icons.google className="h-4 w-4" />
+                                </span>
                                 Google 登录
                             </Button>}
                             {settings.enabled_ms && <Button variant="outline" className="w-full"
                                 onClick={() => onOauthLogin("ms")}>
                                 <Icons.microsoft />
                                 Microsoft 登录
-                            </Button>}
-                            {isEnableWeb3 && <Button variant="outline" className="w-full"
-                                onClick={() => web3Login()}>
-                                <Icons.metamask />
-                                Metamask 登录
                             </Button>}
                         </div>
                         <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
