@@ -17,6 +17,7 @@ from src.temp_mail_bridge import (
     list_user_mails,
     list_user_sendbox,
     save_address_forwarding_rules,
+    send_address_mail,
     sync_temp_mail_user,
 )
 
@@ -102,6 +103,15 @@ def save_address_rules(address_id: int, payload: dict = Body(default={}), user: 
 @router.delete("/api/temp-mail/address_mail/{address_id}/{mail_id}", tags=["Temp Mail"])
 def delete_mail(address_id: int, mail_id: int, user: User = Depends(current_user)):
     return delete_address_mail(user_email(user), address_id, mail_id)
+
+
+@router.post("/api/temp-mail/address_send/{address_id}", tags=["Temp Mail"])
+def send_mail(address_id: int, payload: dict = Body(default={}), user: User = Depends(current_user)):
+    required = ("to_mail", "subject", "content")
+    missing = [field for field in required if not str(payload.get(field) or "").strip()]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"缺少字段：{', '.join(missing)}")
+    return send_address_mail(user_email(user), address_id, payload)
 
 
 @router.post("/api/temp-mail/new_address", tags=["Temp Mail"])

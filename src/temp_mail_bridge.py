@@ -144,6 +144,18 @@ def delete_address_mail(email: str, address_id: int, mail_id: int) -> dict[str, 
     )
 
 
+def send_address_mail(email: str, address_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+    credential = get_address_jwt(email, address_id).get("jwt")
+    if not credential:
+        raise HTTPException(status_code=400, detail="未获取到邮箱凭证")
+    return _request(
+        "POST",
+        "/api/send_mail",
+        json=payload,
+        headers={"Authorization": f"Bearer {credential}"},
+    )
+
+
 def create_bound_address(email: str, payload: dict[str, Any]) -> dict[str, Any]:
     user = sync_temp_mail_user(email)
     if not user:
