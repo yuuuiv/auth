@@ -196,6 +196,10 @@ def _ensure_account_send_balance(address_jwt: str, address: str) -> None:
         sender = next((row for row in rows if row.get("id") is not None), None)
         if not sender:
             raise RuntimeError("Worker 未创建 address_sender 记录")
+        current_balance = max(0, int(sender.get("balance") or 0))
+        current_enabled = bool(int(sender.get("enabled") or 0))
+        if current_enabled and current_balance >= balance:
+            return
         _request(
             "POST",
             "/admin/address_sender",
@@ -203,7 +207,10 @@ def _ensure_account_send_balance(address_jwt: str, address: str) -> None:
                 "address_id": sender["id"],
                 "address": address,
                 "enabled": True,
-                "balance": balance,
+                "balance": max(current_balance, balance),
+                # Initial account quota is infrastructure setup, not a later
+                # administrator change. Keep this first update out of inboxes.
+                "notify": False,
             },
         )
     except Exception as exc:
