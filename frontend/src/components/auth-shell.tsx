@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { X } from "lucide-react"
 
 type AuthShellProps = {
     children: ReactNode
@@ -7,29 +8,23 @@ type AuthShellProps = {
 export function AuthShell({ children }: AuthShellProps) {
     return (
         <main id="main-content" className="auth-main">
-            <section className="auth-context" aria-labelledby="account-title">
-                <p className="auth-eyebrow">NeoFantasy Account</p>
-                <h1 id="account-title">账号中心</h1>
-                <p className="auth-context-description"><span>登录、注册或重置密码。</span><span>该账号用于访问 NeoFantasy Live。</span></p>
-
-                <dl className="auth-details">
+            <section className="auth-account-panel" aria-labelledby="account-title">
+                <header className="auth-panel-header">
                     <div>
-                        <dt>服务</dt>
-                        <dd translate="no">NeoFantasy Live</dd>
+                        <p className="auth-eyebrow">NeoFantasy Account</p>
+                        <h1 id="account-title">用户账户</h1>
                     </div>
-                    <div>
-                        <dt>账号功能</dt>
-                        <dd>登录与节目权限同步</dd>
-                    </div>
-                </dl>
-
-                <a className="auth-site-link" href="https://live.neofantasy.online/index/">
-                    返回 Live 站点 <span aria-hidden="true">↗</span>
-                </a>
-            </section>
-
-            <section className="auth-route" aria-label="账号操作">
-                {children}
+                    <a className="auth-panel-close" href="https://live.neofantasy.online/index/" aria-label="关闭并返回 NeoFantasy Live">
+                        <X aria-hidden="true" />
+                    </a>
+                </header>
+                <section className="auth-route" aria-label="账号操作">
+                    {children}
+                </section>
+                <footer className="auth-panel-footer">
+                    <span>统一账号服务</span>
+                    <a href="https://live.neofantasy.online/index/">返回 NeoFantasy Live <span aria-hidden="true">↗</span></a>
+                </footer>
             </section>
         </main>
     )

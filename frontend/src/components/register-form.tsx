@@ -21,7 +21,7 @@ import { useTheme } from "@/components/theme-provider"
 import { toast } from "sonner"
 import { useGlobal } from "@/components/global-provider"
 import { UseApiClient } from "@/api"
-import { Eye, EyeClosed } from "lucide-react"
+import { Eye, EyeClosed, KeyRound } from "lucide-react"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
 interface EmailVerificationFormProps extends React.ComponentPropsWithoutRef<"div"> {
@@ -118,7 +118,8 @@ function EmailVerificationForm({
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card>
-                <CardHeader>
+                <CardHeader className="auth-form-header">
+                    <div className="auth-form-mark" aria-hidden="true"><KeyRound /></div>
                     <CardTitle>
                         {isResetPassword ? "重置密码" : "注册"}
                     </CardTitle>
@@ -127,6 +128,12 @@ function EmailVerificationForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {!isResetPassword && (
+                        <nav className="auth-segmented" aria-label="选择登录或注册">
+                            <Link to="/login">登录</Link>
+                            <Link to="/register" className="is-active" aria-current="page">注册</Link>
+                        </nav>
+                    )}
                     <form onSubmit={(event) => { event.preventDefault(); void emailSignup() }}>
                         <div className="grid gap-6">
                             <div className="grid gap-2">

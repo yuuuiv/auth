@@ -16,11 +16,12 @@ _logger = logging.getLogger(__name__)
 
 @router.get("/api/settings", tags=["Auth"])
 def auth_settings():
+    central_session_ready = bool(settings.enabled_db and settings.auth_jwt_secret)
     return {
         "enabled_smtp": settings.enabled_db and settings.enabled_smtp,
-        "enabled_github": bool(settings.github_client_id),
-        "enabled_google": bool(settings.google_client_id),
-        "enabled_ms": bool(settings.ms_client_id),
+        "enabled_github": central_session_ready and bool(settings.github_client_id and settings.github_client_secret),
+        "enabled_google": central_session_ready and bool(settings.google_client_id and settings.google_client_secret),
+        "enabled_ms": central_session_ready and bool(settings.ms_client_id and settings.ms_client_secret),
         "enabled_web3": settings.enabled_web3_client,
         "cf_turnstile_site_key": settings.cf_turnstile_site_key,
         "temp_mail_bridge_enabled": temp_mail_bridge_configured(),

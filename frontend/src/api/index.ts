@@ -1,17 +1,19 @@
 import axios, { AxiosError } from 'axios'
+import { useCallback } from 'react'
 import { useGlobal } from "@/components/global-provider";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 const instance = axios.create({
     baseURL: API_BASE,
-    timeout: 10000
+    timeout: 10000,
+    withCredentials: true,
 });
 
 export function UseApiClient() {
     const { setIsLoading } = useGlobal();
 
-    const apiFetch = async <T>(
+    const apiFetch = useCallback(async <T>(
         path: string,
         options: {
             method?: string,
@@ -47,7 +49,7 @@ export function UseApiClient() {
         } finally {
             setIsLoading(false);
         }
-    }
+    }, [setIsLoading])
 
     return {
         apiFetch

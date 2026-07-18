@@ -2,8 +2,10 @@ import jwt
 import uuid
 import datetime
 import logging
+import secrets
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from config import settings
 from models import OauthBody, TokenBody
@@ -14,12 +16,61 @@ from src.temp_mail_bridge import try_sync_temp_mail_user
 
 router = APIRouter()
 _logger = logging.getLogger(__name__)
+_STATEFUL_PROVIDERS = {"github", "google"}
+
+
+def _oauth_provider_configured(login_type: str) -> bool:
+    credentials = {
+        "github": (settings.github_client_id, settings.github_client_secret),
+        "google": (settings.google_client_id, settings.google_client_secret),
+        "ms": (settings.ms_client_id, settings.ms_client_secret),
+    }
+    provider_credentials = credentials.get(login_type)
+    if provider_credentials is None:
+        return True
+    return bool(
+        settings.enabled_db
+        and settings.auth_jwt_secret
+        and all(provider_credentials)
+    )
+
+
+def _validate_redirect_url(redirect_url: str) -> None:
+    if not redirect_url:
+        return
+    parsed = urlparse(redirect_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    if parsed.scheme not in {"http", "https"} or origin not in settings.get_cors_allow_origins():
+        raise HTTPException(status_code=400, detail="OAuth redirect URL is not allowed")
+
+
+def _oauth_state_cookie_name(login_type: str) -> str:
+    return f"{settings.auth_cookie_name}_oauth_{login_type}"
 
 
 @router.get("/api/login", tags=["Auth"])
-def login(login_type: str, redirect_url: str = ""):
+def login(response: Response, login_type: str, redirect_url: str = ""):
     client = AuthClientBase.get_client(login_type)
-    return client.get_login_url(redirect_url)
+    if not _oauth_provider_configured(login_type):
+        raise HTTPException(status_code=503, detail=f"{login_type} OAuth is not configured")
+    _validate_redirect_url(redirect_url)
+    if login_type not in _STATEFUL_PROVIDERS:
+        return client.get_login_url(redirect_url)
+
+    state = secrets.token_urlsafe(32)
+    cookie_options = {
+        "key": _oauth_state_cookie_name(login_type),
+        "value": state,
+        "max_age": 600,
+        "httponly": True,
+        "secure": not settings.debug,
+        "samesite": "lax",
+        "path": "/api/session/oauth-callback",
+    }
+    if settings.auth_cookie_domain:
+        cookie_options["domain"] = settings.auth_cookie_domain
+    response.set_cookie(**cookie_options)
+    return client.get_login_url(redirect_url, state)
 
 
 @router.post("/api/oauth", tags=["Auth"])

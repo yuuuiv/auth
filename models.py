@@ -58,5 +58,6 @@ class SessionExchangeBody(BaseModel):
 class SessionOAuthCallbackBody(BaseModel):
     login_type: str
     code: str
+    state: str = ""
     redirect_url: str = ""
     web3_account: str = ""

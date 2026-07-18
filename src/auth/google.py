@@ -14,6 +14,7 @@ _logger = logging.getLogger(__name__)
 GOOGLE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOEKN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USER_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
+REQUEST_TIMEOUT_SECONDS = 10
 
 
 class GoogleAuthClient(AuthClientBase):
@@ -21,21 +22,24 @@ class GoogleAuthClient(AuthClientBase):
     _login_type = "google"
 
     @classmethod
-    def get_login_url(cls, redirect_url: str = "") -> str:
-        return f"{GOOGLE_URL}?{urlencode({
+    def get_login_url(cls, redirect_url: str = "", state: str = "") -> str:
+        params = {
             "response_type": "code",
             "scope": "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
             "client_id": settings.google_client_id,
             "redirect_uri": redirect_url,
             "access_type": "online",
             "prompt": "select_account",
-        })}"
+        }
+        if state:
+            params["state"] = state
+        return f"{GOOGLE_URL}?{urlencode(params)}"
 
     @classmethod
     def get_user(cls, oauth_body: OauthBody) -> Optional[User]:
         if not oauth_body.code:
             return None
-        token_res = requests.post(
+        token_response = requests.post(
             GOOGLE_TOEKN_URL,
             data={
                 'code': oauth_body.code,
@@ -44,22 +48,28 @@ class GoogleAuthClient(AuthClientBase):
                 'client_secret': settings.google_client_secret,
                 'grant_type': 'authorization_code'
             },
-            headers={"Accept": "application/json"}
-        ).json()
+            headers={"Accept": "application/json"},
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        token_response.raise_for_status()
+        token_res = token_response.json()
         if not token_res.get('access_token'):
             raise ValueError("Can't get access token from google")
         access_token = token_res['access_token']
-        res = requests.get(
+        user_response = requests.get(
             GOOGLE_USER_URL,
             headers={
                 "Authorization": f"Bearer {access_token}",
                 "Accept": "application/json"
-            }
-        ).json()
+            },
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        user_response.raise_for_status()
+        res = user_response.json()
         origin_data = res
         user_email = res.get('email')
-        if not user_email:
-            raise ValueError("Can't get user email from google")
+        if not user_email or res.get("verified_email") is not True:
+            raise ValueError("Google account email is missing or unverified")
         user_name = user_email.replace("@gmail.com", "")
         return User(
             login_type=cls._login_type,

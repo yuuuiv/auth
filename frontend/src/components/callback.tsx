@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { UseApiClient } from "@/api";
+import { useGlobal } from "@/components/global-provider";
 
 export function Callback({
     className,
@@ -13,18 +14,28 @@ export function Callback({
     const { loginType } = useParams();
     const navigate = useNavigate()
     const { apiFetch } = UseApiClient()
-    const [URLSearchParams] = useSearchParams();
+    const { setJwtSession } = useGlobal();
+    const [searchParams] = useSearchParams();
     const [failed, setFailed] = useState(false);
+    const requestStarted = useRef(false);
+    const code = searchParams.get("code") || "";
+    const state = searchParams.get("state") || "";
+    const providerError = searchParams.get("error_description") || searchParams.get("error") || "";
+
     useEffect(() => {
-        if (!loginType) {
+        if (requestStarted.current) return;
+        requestStarted.current = true;
+
+        if (!loginType || !code || providerError) {
             setFailed(true);
-            toast.error(`登录失败 ${loginType}`);
+            toast.error(providerError ? `登录失败：${providerError}` : "登录回调缺少必要参数");
             return;
         }
         const reqBody = {
             login_type: loginType,
-            code: URLSearchParams.get("code"),
-            web3_account: URLSearchParams.get("web3_account"),
+            code,
+            state,
+            web3_account: searchParams.get("web3_account"),
             redirect_url: `${window.location.origin}${window.location.pathname}`
         };
         const loginApiCall = async () => {
@@ -40,15 +51,16 @@ export function Callback({
                     toast.error(`登录失败 ${response}`);
                     return;
                 }
-                navigate("/user");
+                setJwtSession(response.access_token);
+                navigate("/user", { replace: true });
             } catch (error) {
                 setFailed(true);
                 toast.error(`登录失败 ${(error as Error).message}`);
                 return;
             }
         }
-        loginApiCall();
-    }, []);
+        void loginApiCall();
+    }, [apiFetch, code, loginType, navigate, providerError, searchParams, setJwtSession, state]);
 
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>

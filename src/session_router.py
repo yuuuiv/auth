@@ -179,10 +179,20 @@ def session_oauth_exchange(body: SessionExchangeBody, response: Response):
 
 
 @router.post("/oauth-callback")
-def session_oauth_callback(body: SessionOAuthCallbackBody, response: Response):
+def session_oauth_callback(body: SessionOAuthCallbackBody, request: Request, response: Response):
     """Complete a first-party Google/GitHub login and issue the central session."""
     if not body.code:
         raise HTTPException(status_code=400, detail="OAuth code is required")
+    if body.login_type in {"google", "github"}:
+        state_cookie_name = f"{settings.auth_cookie_name}_oauth_{body.login_type}"
+        expected_state = request.cookies.get(state_cookie_name, "")
+        response.delete_cookie(
+            state_cookie_name,
+            domain=settings.auth_cookie_domain or None,
+            path="/api/session/oauth-callback",
+        )
+        if not expected_state or not body.state or not secrets.compare_digest(expected_state, body.state):
+            raise HTTPException(status_code=400, detail="OAuth state is invalid or expired")
     client = AuthClientBase.get_client(body.login_type)
     try:
         user = client.get_user(OauthBody(
@@ -208,6 +218,12 @@ def session_oauth_callback(body: SessionOAuthCallbackBody, response: Response):
         row = db.register_email_user(email, hash_password(secrets.token_urlsafe(32)), role)
     if not row:
         raise HTTPException(status_code=500, detail="Failed to create OAuth identity")
+    try:
+        db.update_oauth_user(user)
+    except Exception as exc:
+        # The central account remains the source of truth. Keep login available
+        # while reporting a missing/legacy OAuth audit table for migration.
+        _logger.warning("OAuth identity history could not be saved for %s: %s", body.login_type, exc)
     row = _row_with_admin_role(row)
     token, expires_at = issue_token(row)
     _set_cookie(response, token, max(0, expires_at - int(time.time())))

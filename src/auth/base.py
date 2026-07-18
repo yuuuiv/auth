@@ -27,7 +27,7 @@ class AuthClientBase(metaclass=MetaAuthClient):
         return cls
 
     @classmethod
-    def get_login_url(cls, redirect_url: str = "") -> str:
+    def get_login_url(cls, redirect_url: str = "", state: str = "") -> str:
         raise NotImplementedError()
 
     @classmethod

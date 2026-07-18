@@ -31,7 +31,7 @@
 
 ## OAuth 登录
 
-前端登录页会根据 `GET /api/settings` 返回的 `enabled_google`、`enabled_github` 显示按钮。
+前端登录页始终显示 Google 和 GitHub 入口；只有 `GET /api/settings` 确认数据库、JWT 密钥和对应 OAuth client ID/secret 均已配置时按钮才可点击，缺少配置时会显示“未配置”。
 
 Google 和 GitHub OAuth 应用的回调地址分别设置为：
 
@@ -50,6 +50,8 @@ github_client_secret=<GitHub OAuth client secret>
 ```
 
 站内回调会调用 `/api/session/oauth-callback`，由 Auth 服务取得提供商用户信息、创建或关联中心账号，然后签发 `nf_session`。client secret 不会进入浏览器，也不要求 Neofantasy Live 使用旧的 `app_settings` 才能登录。
+
+若 Supabase 表曾被删除或字段不完整，在 Supabase SQL Editor 执行 [`db/restore_oauth.sql`](db/restore_oauth.sql)。OAuth 不需要新增 provider 专用列；该脚本会恢复中心账号表、第三方身份映射表和 `(login_type, user_email)` 唯一索引。
 
 ## 旧应用 OAuth 接口
 
