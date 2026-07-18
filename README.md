@@ -1,4 +1,4 @@
-# Auth
+# Auth(-live)
 
 🔐 轻量级、自托管的统一认证网关。一行配置即可为你的任意应用接入 **GitHub / Google / Microsoft / Web3 钱包 / 邮箱验证码** 等多种登录方式，返回标准 JWT，开箱即用。
 
