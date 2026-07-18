@@ -17,6 +17,7 @@ export function Callback({
     const { setJwtSession } = useGlobal();
     const [searchParams] = useSearchParams();
     const [failed, setFailed] = useState(false);
+    const [failureMessage, setFailureMessage] = useState("登录失败，请重试");
     const requestStarted = useRef(false);
     const code = searchParams.get("code") || "";
     const state = searchParams.get("state") || "";
@@ -28,7 +29,9 @@ export function Callback({
 
         if (!loginType || !code || providerError) {
             setFailed(true);
-            toast.error(providerError ? `登录失败：${providerError}` : "登录回调缺少必要参数");
+            const message = providerError ? `登录失败：${providerError}` : "登录回调缺少必要参数";
+            setFailureMessage(message);
+            toast.error(message);
             return;
         }
         const reqBody = {
@@ -42,20 +45,28 @@ export function Callback({
             try {
                 const response = await apiFetch<{
                     access_token: string;
+                    return_to?: string;
                 }>(`/api/session/oauth-callback`, {
                     method: "POST",
                     body: JSON.stringify(reqBody)
                 });
                 if (!response?.access_token) {
                     setFailed(true);
+                    setFailureMessage("认证服务没有返回有效会话");
                     toast.error(`登录失败 ${response}`);
                     return;
                 }
                 setJwtSession(response.access_token);
-                navigate("/user", { replace: true });
+                if (response.return_to) {
+                    window.location.assign(response.return_to);
+                } else {
+                    navigate("/user", { replace: true });
+                }
             } catch (error) {
                 setFailed(true);
-                toast.error(`登录失败 ${(error as Error).message}`);
+                const message = (error as Error).message || "登录失败，请重试";
+                setFailureMessage(message);
+                toast.error(`登录失败 ${message}`);
                 return;
             }
         }
@@ -73,7 +84,7 @@ export function Callback({
                     {failed ? (
                         <div className="flex flex-col items-center justify-center gap-2">
                             <p className="text-sm text-red-500">
-                                登录失败，请重试
+                                {failureMessage}
                             </p>
                             <Button variant="outline" asChild className="w-full">
                                 <Link to="/">返回登录</Link>

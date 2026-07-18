@@ -50,7 +50,9 @@ github_client_id=<GitHub OAuth client ID>
 github_client_secret=<GitHub OAuth client secret>
 ```
 
-站内回调会调用 `/api/session/oauth-callback`，由 Auth 服务取得提供商用户信息、创建或关联中心账号，然后签发 `nf_session`。client secret 不会进入浏览器，也不要求 Neofantasy Live 使用旧的 `app_settings` 才能登录。
+站内回调会调用 `/api/session/oauth-callback`，由 Auth 服务取得提供商用户信息、创建或关联中心账号，然后签发 `nf_session`。client secret 不会进入浏览器，也不要求 Neofantasy Live 使用旧的 `app_settings` 才能登录。`GET /api/login` 可附带经过来源白名单验证的 `return_to`；认证成功后前端会返回该页面，供 LIVE 页面恢复共享会话。
+
+Vercel 预览域名也应继续使用上面的 `auth.neofantasy.online` 回调地址，避免为同一个 GitHub OAuth App 维护多个 callback。预览域只需要加入 `cors_allow_origins`。
 
 若 Supabase 表曾被删除或字段不完整，在 Supabase SQL Editor 执行 [`db/restore_oauth.sql`](db/restore_oauth.sql)。OAuth 不需要新增 provider 专用列；该脚本会恢复中心账号表、第三方身份映射表和 `(login_type, user_email)` 唯一索引。
 
@@ -59,6 +61,7 @@ github_client_secret=<GitHub OAuth client secret>
 旧的多租户应用接口仍保留：
 
 - `GET /api/login?login_type=github|google&redirect_url=...`：获取第三方登录跳转地址。
+- `GET /api/login/redirect?login_type=...&redirect_url=...&return_to=...`：以顶层导航开始 OAuth，适合 LIVE 与 Vercel 预览页，避免跨域 state Cookie 被浏览器拦截。
 - `POST /api/oauth`：处理第三方回调并返回临时授权码。
 - `POST /api/token`：使用服务端保存的 `app_secret` 将授权码换成 JWT。
 
@@ -69,7 +72,7 @@ github_client_secret=<GitHub OAuth client secret>
 ```dotenv
 # 基础
 debug=false
-cors_allow_origins=http://localhost:5173,https://live.neofantasy.online
+cors_allow_origins=http://localhost:5173,https://live.neofantasy.online,https://auth.neofantasy.online,https://auth-live-ten.vercel.app
 
 # 数据库
 enabled_db=true

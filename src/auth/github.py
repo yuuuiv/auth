@@ -52,7 +52,8 @@ class GithubAuthClient(AuthClientBase):
         token_response.raise_for_status()
         token_res = token_response.json()
         if not token_res.get('access_token'):
-            raise ValueError("Can't get access token from github")
+            error_code = token_res.get("error") or "token_missing"
+            raise ValueError(f"GitHub OAuth token error: {error_code}")
         access_token = token_res['access_token']
         user_response = requests.get(
             GITHUB_USER_URL,

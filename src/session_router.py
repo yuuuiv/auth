@@ -2,6 +2,7 @@ import logging
 import re
 import secrets
 import time
+from urllib.parse import urlparse
 
 import jwt
 
@@ -71,6 +72,49 @@ def _row_with_admin_role(row: dict) -> dict:
         row = dict(row)
         row["role"] = "admin"
     return row
+
+
+def _cookie_domain_for_request(request: Request) -> str | None:
+    configured = settings.auth_cookie_domain.strip()
+    hostname = (request.url.hostname or "").lower().rstrip(".")
+    cookie_root = configured.lower().lstrip(".").rstrip(".")
+    if configured and (hostname == cookie_root or hostname.endswith(f".{cookie_root}")):
+        return configured
+    return None
+
+
+def _oauth_failure_detail(exc: Exception) -> str:
+    provider_error = ""
+    provider_response = getattr(exc, "response", None)
+    if provider_response is not None:
+        try:
+            payload = provider_response.json()
+            if isinstance(payload, dict):
+                provider_error = str(
+                    payload.get("error_description")
+                    or payload.get("error")
+                    or ""
+                ).strip()
+        except (TypeError, ValueError):
+            provider_error = ""
+    normalized = f"{provider_error} {exc}".lower()
+    if "invalid_client" in normalized or "incorrect_client_credentials" in normalized:
+        return "OAuth 客户端凭据被拒绝，请检查对应平台的 Client ID 与 Client Secret"
+    if "bad_verification_code" in normalized or "invalid_grant" in normalized:
+        return "OAuth 授权码被拒绝，请核对完整回调地址后重新登录"
+    if "redirect_uri_mismatch" in normalized:
+        return "OAuth 回调地址与第三方平台配置不一致"
+    return "OAuth 授权码兑换失败，请检查 Client Secret 和回调地址"
+
+
+def _validated_return_to(value: str) -> str:
+    if not value:
+        return ""
+    parsed = urlparse(value)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    if parsed.scheme in {"http", "https"} and origin in settings.get_cors_allow_origins():
+        return value
+    return ""
 
 
 @router.get("/me")
@@ -219,14 +263,24 @@ def session_oauth_callback(body: SessionOAuthCallbackBody, request: Request, res
         raise HTTPException(status_code=400, detail="OAuth code is required")
     if body.login_type in {"google", "github"}:
         state_cookie_name = f"{settings.auth_cookie_name}_oauth_{body.login_type}"
+        return_cookie_name = f"{settings.auth_cookie_name}_oauth_return_{body.login_type}"
         expected_state = request.cookies.get(state_cookie_name, "")
+        return_to = _validated_return_to(request.cookies.get(return_cookie_name, ""))
+        cookie_domain = _cookie_domain_for_request(request)
         response.delete_cookie(
             state_cookie_name,
-            domain=settings.auth_cookie_domain or None,
+            domain=cookie_domain,
+            path="/api/session/oauth-callback",
+        )
+        response.delete_cookie(
+            return_cookie_name,
+            domain=cookie_domain,
             path="/api/session/oauth-callback",
         )
         if not expected_state or not body.state or not secrets.compare_digest(expected_state, body.state):
             raise HTTPException(status_code=400, detail="OAuth state is invalid or expired")
+    else:
+        return_to = ""
     client = AuthClientBase.get_client(body.login_type)
     try:
         user = client.get_user(OauthBody(
@@ -237,8 +291,9 @@ def session_oauth_callback(body: SessionOAuthCallbackBody, request: Request, res
             web3_account=body.web3_account or None,
         ))
     except Exception as exc:
-        _logger.warning("OAuth callback failed for %s: %s", body.login_type, exc)
-        raise HTTPException(status_code=401, detail="OAuth login failed") from exc
+        detail = _oauth_failure_detail(exc)
+        _logger.warning("OAuth callback failed for %s: %s (%s)", body.login_type, exc, detail)
+        raise HTTPException(status_code=401, detail=detail) from exc
     if not user:
         raise HTTPException(status_code=401, detail="OAuth identity not found")
 
@@ -261,7 +316,12 @@ def session_oauth_callback(body: SessionOAuthCallbackBody, request: Request, res
     row = _row_with_admin_role(row)
     token, expires_at = issue_token(row)
     _set_cookie(response, token, max(0, expires_at - int(time.time())))
-    return {"user": public_user(row), "access_token": token, "expires_at": expires_at}
+    return {
+        "user": public_user(row),
+        "access_token": token,
+        "expires_at": expires_at,
+        "return_to": return_to,
+    }
 
 
 @router.post("/logout")

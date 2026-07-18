@@ -34,7 +34,8 @@ class Settings(BaseSettings):
         "https://fd2a0955.temp-mail-30o.pages.dev,"
         "https://live.neofantasy.online,"
         "https://api.neofantasy.online,"
-        "https://auth.neofantasy.online"
+        "https://auth.neofantasy.online,"
+        "https://auth-live-ten.vercel.app"
     )
 
     # token settings

@@ -15,13 +15,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Link, useNavigate } from "react-router"
-import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
-import { useRef, useState } from "react"
+import { Turnstile } from '@marsidev/react-turnstile'
+import { useState } from "react"
 import { useTheme } from "@/components/theme-provider"
 import { toast } from "sonner"
 import { useGlobal } from "@/components/global-provider"
 import { UseApiClient } from "@/api"
-import { Eye, EyeClosed, KeyRound } from "lucide-react"
+import { Eye, EyeClosed } from "lucide-react"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
 interface EmailVerificationFormProps extends React.ComponentPropsWithoutRef<"div"> {
@@ -46,8 +46,6 @@ function EmailVerificationForm({
     const [verifyCodeTimeout, setVerifyCodeTimeout] = useState<number>(0)
     const [isSendingCode, setIsSendingCode] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const turnstileRef = useRef<TurnstileInstance | undefined>(undefined)
-    const turnstileAction = isResetPassword ? "password_reset" : "email_register"
     if (!settings.enabled_smtp) return null;
     const sendVerificationCode = async () => {
         if (!email) {
@@ -66,8 +64,7 @@ function EmailVerificationForm({
                 method: "POST",
                 body: JSON.stringify({
                     email: email,
-                    cf_token: token,
-                    cf_action: turnstileAction,
+                    cf_token: token
                 })
             });
             if (res && res.timeout) {
@@ -87,10 +84,6 @@ function EmailVerificationForm({
             toast.error((error as Error).message || "发送验证码失败");
         } finally {
             setIsSendingCode(false)
-            if (settings.cf_turnstile_site_key) {
-                setToken(null)
-                turnstileRef.current?.reset()
-            }
         }
     };
 
@@ -103,7 +96,7 @@ function EmailVerificationForm({
         try {
             const res = await apiFetch<{
                 access_token: string;
-            }>(isResetPassword ? `/api/session/reset-password` : `/api/session/register`, {
+            }>(`/api/session/register`, {
                 method: "POST",
                 body: JSON.stringify({
                     email: email,
@@ -113,11 +106,11 @@ function EmailVerificationForm({
             });
             if (res && res.access_token) {
                 setJwtSession(res.access_token);
-                toast.success(isResetPassword ? "密码已重置" : "注册成功");
+                toast.success("注册成功");
                 navigate("/user");
             }
         } catch (error) {
-            toast.error((error as Error).message || (isResetPassword ? "重置密码失败" : "注册失败"));
+            toast.error((error as Error).message || "注册失败");
         } finally {
             setIsSubmitting(false)
         }
@@ -125,8 +118,7 @@ function EmailVerificationForm({
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card>
-                <CardHeader className="auth-form-header">
-                    <div className="auth-form-mark" aria-hidden="true"><KeyRound /></div>
+                <CardHeader>
                     <CardTitle>
                         {isResetPassword ? "重置密码" : "注册"}
                     </CardTitle>
@@ -135,12 +127,6 @@ function EmailVerificationForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {!isResetPassword && (
-                        <nav className="auth-segmented" aria-label="选择登录或注册">
-                            <Link to="/login">登录</Link>
-                            <Link to="/register" className="is-active" aria-current="page">注册</Link>
-                        </nav>
-                    )}
                     <form onSubmit={(event) => { event.preventDefault(); void emailSignup() }}>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
@@ -178,21 +164,12 @@ function EmailVerificationForm({
                             </div>
                             {settings.cf_turnstile_site_key && <div className="text-center">
                                 <Turnstile
-                                    ref={turnstileRef}
                                     siteKey={settings.cf_turnstile_site_key}
                                     options={{
                                         theme: resolvedTheme,
                                         language: 'zh-CN',
-                                        action: turnstileAction,
-                                        size: 'flexible',
-                                        refreshExpired: 'auto',
                                     }}
-                                    onSuccess={setToken}
-                                    onExpire={() => setToken(null)}
-                                    onError={() => {
-                                        setToken(null)
-                                        toast.error("人机验证加载失败，请刷新后重试")
-                                    }} />
+                                    onSuccess={setToken} />
                             </div>}
                             <div className="grid gap-2">
                                 <Label htmlFor="verification-code">邮箱验证码</Label>

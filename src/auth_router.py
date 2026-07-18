@@ -5,7 +5,8 @@ import logging
 import secrets
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
 
 from config import settings
 from models import OauthBody, TokenBody
@@ -48,12 +49,31 @@ def _oauth_state_cookie_name(login_type: str) -> str:
     return f"{settings.auth_cookie_name}_oauth_{login_type}"
 
 
-@router.get("/api/login", tags=["Auth"])
-def login(response: Response, login_type: str, redirect_url: str = ""):
+def _oauth_return_cookie_name(login_type: str) -> str:
+    return f"{settings.auth_cookie_name}_oauth_return_{login_type}"
+
+
+def _cookie_domain_for_request(request: Request) -> str | None:
+    configured = settings.auth_cookie_domain.strip()
+    hostname = (request.url.hostname or "").lower().rstrip(".")
+    cookie_root = configured.lower().lstrip(".").rstrip(".")
+    if configured and (hostname == cookie_root or hostname.endswith(f".{cookie_root}")):
+        return configured
+    return None
+
+
+def _prepare_login(
+    request: Request,
+    response: Response,
+    login_type: str,
+    redirect_url: str = "",
+    return_to: str = "",
+) -> str:
     client = AuthClientBase.get_client(login_type)
     if not _oauth_provider_configured(login_type):
         raise HTTPException(status_code=503, detail=f"{login_type} OAuth is not configured")
     _validate_redirect_url(redirect_url)
+    _validate_redirect_url(return_to)
     if login_type not in _STATEFUL_PROVIDERS:
         return client.get_login_url(redirect_url)
 
@@ -67,10 +87,42 @@ def login(response: Response, login_type: str, redirect_url: str = ""):
         "samesite": "lax",
         "path": "/api/session/oauth-callback",
     }
-    if settings.auth_cookie_domain:
-        cookie_options["domain"] = settings.auth_cookie_domain
+    cookie_domain = _cookie_domain_for_request(request)
+    if cookie_domain:
+        cookie_options["domain"] = cookie_domain
     response.set_cookie(**cookie_options)
+    if return_to:
+        return_cookie_options = {
+            **cookie_options,
+            "key": _oauth_return_cookie_name(login_type),
+            "value": return_to,
+        }
+        response.set_cookie(**return_cookie_options)
     return client.get_login_url(redirect_url, state)
+
+
+@router.get("/api/login", tags=["Auth"])
+def login(
+    request: Request,
+    response: Response,
+    login_type: str,
+    redirect_url: str = "",
+    return_to: str = "",
+):
+    return _prepare_login(request, response, login_type, redirect_url, return_to)
+
+
+@router.get("/api/login/redirect", tags=["Auth"])
+def login_redirect(
+    request: Request,
+    login_type: str,
+    redirect_url: str = "",
+    return_to: str = "",
+):
+    response = RedirectResponse(url="/", status_code=302)
+    login_url = _prepare_login(request, response, login_type, redirect_url, return_to)
+    response.headers["location"] = login_url
+    return response
 
 
 @router.post("/api/oauth", tags=["Auth"])

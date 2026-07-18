@@ -54,7 +54,8 @@ class GoogleAuthClient(AuthClientBase):
         token_response.raise_for_status()
         token_res = token_response.json()
         if not token_res.get('access_token'):
-            raise ValueError("Can't get access token from google")
+            error_code = token_res.get("error") or "token_missing"
+            raise ValueError(f"Google OAuth token error: {error_code}")
         access_token = token_res['access_token']
         user_response = requests.get(
             GOOGLE_USER_URL,
