@@ -20,7 +20,6 @@ import { useTheme } from "@/components/theme-provider"
 import { toast } from "sonner"
 import { useGlobal } from "@/components/global-provider"
 import { UseApiClient } from "@/api"
-import { hashPassword } from "@/utils"
 import { Eye, EyeClosed } from "lucide-react"
 
 interface RegisterFormProps extends React.ComponentPropsWithoutRef<"div"> {
@@ -34,7 +33,7 @@ export function RegisterForm({
     ...props
 }: RegisterFormProps) {
     const { theme } = useTheme()
-    const { settings } = useGlobal()
+    const { settings, setJwtSession } = useGlobal()
     const { apiFetch } = UseApiClient()
     const navigate = useNavigate()
     const [token, setToken] = useState<string | null>(null)
@@ -56,7 +55,7 @@ export function RegisterForm({
         try {
             const res = await apiFetch<{
                 timeout: number
-            }>(`/api/email/verify_code`, {
+            }>(`/api/session/verify-code`, {
                 method: "POST",
                 body: JSON.stringify({
                     email: email,
@@ -87,18 +86,20 @@ export function RegisterForm({
             return;
         }
         try {
-            const res = await apiFetch(`/api/email/register`, {
+            const res = await apiFetch<{
+                access_token: string;
+            }>(`/api/session/register`, {
                 method: "POST",
                 body: JSON.stringify({
                     email: email,
-                    // hash password
-                    password: await hashPassword(password),
+                    password: password,
                     code: code
                 })
             });
-            if (res) {
-                toast.success("注册成功, 请登录");
-                navigate("/");
+            if (res && res.access_token) {
+                setJwtSession(res.access_token);
+                toast.success("注册成功");
+                navigate("/user");
             }
         } catch (error) {
             toast.error((error as Error).message || "注册失败");

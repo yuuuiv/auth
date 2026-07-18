@@ -13,7 +13,6 @@ import { Link } from "react-router"
 import { UseApiClient } from "@/api"
 import { useState } from "react"
 import { toast } from "sonner"
-import { hashPassword } from "@/utils"
 import { useNavigate } from "react-router";
 import { Eye, EyeClosed } from "lucide-react"
 import { useGlobal } from "@/components/global-provider"
@@ -28,7 +27,7 @@ export function LoginForm({
     const [email, setEmail] = useState<string>("")
     const [password, setPassword] = useState<string>("")
     const [showPassword, setShowPassword] = useState(false);
-    const { settings } = useGlobal();
+    const { settings, setJwtSession } = useGlobal();
     const hasOauthProvider = Boolean(
         settings.enabled_github ||
         settings.enabled_google ||
@@ -59,20 +58,20 @@ export function LoginForm({
         }
         try {
             const res = await apiFetch<{
-                code: string;
-            }>(`/api/email/login`, {
+                access_token: string;
+            }>(`/api/session/login`, {
                 method: "POST",
                 body: JSON.stringify({
                     email: email,
-                    // hash password
-                    password: await hashPassword(password)
+                    password: password,
                 })
             });
-            if (!res || !res.code) {
+            if (!res || !res.access_token) {
                 toast.error("登录失败");
                 return;
             }
-            navigate(`/callback/email?code=${res.code}`);
+            setJwtSession(res.access_token);
+            navigate("/user");
         } catch (error) {
             toast.error((error as Error).message || "登录失败");
             console.error((error as Error).message || "登录失败");

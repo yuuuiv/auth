@@ -1,11 +1,13 @@
 import logging
 import secrets
+from typing import Any, Optional
 from datetime import datetime, timezone
 
 import requests
 
 from config import settings
 from models import User
+from src.passwords import hash_password, verify_password
 
 from .base import DBClientBase
 from fastapi import HTTPException
@@ -85,10 +87,13 @@ class SupabaseRestClient(DBClientBase):
             raise HTTPException(
                 status_code=400, detail="User not found"
             )
-        if not secrets.compare_digest(data[0].get("password", ""), user.password):
+        stored_password = data[0].get("password", "")
+        if not verify_password(stored_password, user.password):
             raise HTTPException(
                 status_code=400, detail="User password incorrect"
             )
+        if stored_password and not stored_password.startswith("scrypt$"):
+            cls.update_password(user.user_email, hash_password(user.password))
         return True
 
     @classmethod
@@ -99,7 +104,7 @@ class SupabaseRestClient(DBClientBase):
             json={
                 "user_name": user.user_name,
                 "user_email": user.user_email,
-                "password": user.password,
+                "password": user.password if user.password.startswith("scrypt$") else hash_password(user.password),
                 "updated_at": cls._updated_at(),
             },
             headers=cls._headers("resolution=merge-duplicates,return=minimal"),
@@ -107,6 +112,68 @@ class SupabaseRestClient(DBClientBase):
         if res.status_code >= 400:
             cls._raise_supabase_error("Failed to register user", res)
         return True
+
+    @classmethod
+    def get_user_by_email(cls, email: str) -> Optional[dict[str, Any]]:
+        res = requests.get(
+            f"{cls._rest_base_url()}/awsl_users",
+            params={
+                "user_email": f"eq.{email}",
+                "select": "id,user_name,user_email,password,active,role",
+                "limit": "1",
+            },
+            headers=cls._headers(),
+        )
+        if res.status_code >= 400:
+            cls._raise_supabase_error("Failed to find user", res)
+        data = res.json()
+        return data[0] if data else None
+
+    @classmethod
+    def get_user_by_id(cls, user_id: str) -> Optional[dict[str, Any]]:
+        res = requests.get(
+            f"{cls._rest_base_url()}/awsl_users",
+            params={
+                "id": f"eq.{user_id}",
+                "select": "id,user_name,user_email,password,active,role",
+                "limit": "1",
+            },
+            headers=cls._headers(),
+        )
+        if res.status_code >= 400:
+            cls._raise_supabase_error("Failed to find user", res)
+        data = res.json()
+        return data[0] if data else None
+
+    @classmethod
+    def register_email_user(cls, email: str, password_hash: str, role: str = "user") -> Optional[dict[str, Any]]:
+        res = requests.post(
+            f"{cls._rest_base_url()}/awsl_users",
+            params={"on_conflict": "user_email"},
+            json=[{
+                "user_name": email,
+                "user_email": email,
+                "password": password_hash,
+                "role": role,
+                "updated_at": cls._updated_at(),
+            }],
+            headers=cls._headers("resolution=merge-duplicates,return=representation"),
+        )
+        if res.status_code >= 400:
+            cls._raise_supabase_error("Failed to register user", res)
+        data = res.json()
+        return data[0] if data else cls.get_user_by_email(email)
+
+    @classmethod
+    def update_password(cls, email: str, password_hash: str) -> None:
+        res = requests.patch(
+            f"{cls._rest_base_url()}/awsl_users",
+            params={"user_email": f"eq.{email}"},
+            json={"password": password_hash, "updated_at": cls._updated_at()},
+            headers=cls._headers("return=minimal"),
+        )
+        if res.status_code >= 400:
+            cls._raise_supabase_error("Failed to update password", res)
 
     @classmethod
     def update_oauth_user(cls, user: User) -> bool:

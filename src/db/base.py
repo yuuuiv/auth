@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 from fastapi import HTTPException, status
 
 from models import User
@@ -41,3 +43,19 @@ class DBClientBase(metaclass=MetaDBClient):
     @classmethod
     def update_oauth_user(cls, user: User) -> bool:
         return True
+
+    @classmethod
+    def get_user_by_email(cls, email: str) -> Optional[dict[str, Any]]:
+        return None
+
+    @classmethod
+    def get_user_by_id(cls, user_id: str) -> Optional[dict[str, Any]]:
+        return None
+
+    @classmethod
+    def register_email_user(cls, email: str, password_hash: str, role: str = "user") -> Optional[dict[str, Any]]:
+        return None
+
+    @classmethod
+    def update_password(cls, email: str, password_hash: str) -> None:
+        return None

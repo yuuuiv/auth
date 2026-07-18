@@ -13,6 +13,7 @@ from src.info_router import router as info_router
 from src.user_router import router as user_router
 from src.health_check_router import router as health_check_router
 from src.temp_mail_router import router as temp_mail_router
+from src.session_router import router as session_router
 
 
 _logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ app.include_router(info_router)
 app.include_router(user_router)
 app.include_router(health_check_router)
 app.include_router(temp_mail_router)
+app.include_router(session_router)
 
 if os.path.exists("dist"):
 
@@ -78,9 +80,10 @@ if os.path.exists("dist"):
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
+    _logger.exception("Unhandled request error: %s %s", request.method, request.url.path)
     return PlainTextResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=f"Internal Server Error: {exc}",
+        content="Internal Server Error",
     )
 
 if __name__ == "__main__":

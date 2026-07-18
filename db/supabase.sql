@@ -6,6 +6,7 @@ create table public.awsl_users (
     updated_at timestamp without time zone not null default now(),
     password text not null,
     active boolean not null default true,
+    role text not null default 'user',
     constraint awsl_users_pkey primary key (id),
     constraint awsl_users_user_email_key unique (user_email)
 );
@@ -24,3 +25,7 @@ create table public.awsl_oauth_users (
 );
 
 create unique index awsl_oauth_users_unique_index on public.awsl_oauth_users using btree (login_type, user_email) tablespace pg_default;
+
+-- Safe to run against an existing Supabase project.
+alter table public.awsl_users add column if not exists role text not null default 'user';
+create index if not exists awsl_users_email_index on public.awsl_users (lower(user_email));

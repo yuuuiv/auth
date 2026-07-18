@@ -31,7 +31,10 @@ class Settings(BaseSettings):
         "http://localhost,"
         "http://127.0.0.1,"
         "https://mail.cerise-bouquet.xyz,"
-        "https://fd2a0955.temp-mail-30o.pages.dev"
+        "https://fd2a0955.temp-mail-30o.pages.dev,"
+        "https://live.neofantasy.online,"
+        "https://api.neofantasy.online,"
+        "https://auth.neofantasy.online"
     )
 
     # token settings
@@ -40,6 +43,13 @@ class Settings(BaseSettings):
     upstash_api_url: str = ""
     upstash_api_token: str = Field(default="", exclude=True)
     token_code_expire_seconds: int = 30
+    auth_jwt_secret: str = Field(default="", exclude=True)
+    auth_token_expire_days: int = 30
+    auth_cookie_name: str = "nf_session"
+    auth_cookie_domain: str = ""
+    auth_issuer: str = "neofantasy-auth"
+    auth_audience: str = "neofantasy"
+    admin_emails: str = ""
 
     # db settings
     enabled_db: bool = False
@@ -97,6 +107,13 @@ class Settings(BaseSettings):
             for origin in self.cors_allow_origins.split(",")
             if origin.strip()
         ]
+
+    def get_admin_emails(self) -> set[str]:
+        return {
+            email.strip().lower()
+            for email in self.admin_emails.split(",")
+            if email.strip()
+        }
 
 settings = Settings()
 _logger.info(f"settings: {settings.model_dump_json(indent=2)}")

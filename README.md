@@ -101,8 +101,8 @@ sequenceDiagram
 
 5. 使用 JWT：
 
-   - **方式一**：在浏览器中直接使用 `jwt`，用 `app_secret` 解码。
-   - **方式二**：携带 JWT 请求用户信息接口：
+   - 不要把 `app_secret` 放进浏览器，也不要在浏览器自行解码或验证 JWT。
+   - 携带 JWT 请求用户信息接口：
 
    ```js
    const user = await fetch(`/api/info?app_id=${app_id}`, {
@@ -305,6 +305,21 @@ OAuth / Web3 回调处理，返回临时授权码。
 #### `GET /api/health_check`
 
 健康检查端点，返回 `200 OK`。
+
+### NeoFantasy 会话接口
+
+站点集成应优先使用以下接口。它们由 Auth 统一创建账号、验证密码并签发带 `iss`/`aud` 的 JWT，同时设置 HttpOnly Cookie；`access_token` 仅用于不能共享子域 Cookie 的开发回退，不应放入 URL。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/session/verify-code` | 校验 Turnstile 并发送注册验证码 |
+| `POST` | `/api/session/register` | 使用邮箱、密码和验证码创建账号并登录 |
+| `POST` | `/api/session/login` | 邮箱密码登录 |
+| `GET` | `/api/session/me` | 获取当前会话用户和角色 |
+| `POST` | `/api/session/logout` | 清除会话 Cookie |
+| `POST` | `/api/session/oauth-exchange` | 将现有 OAuth provider code 换成中心会话 |
+
+生产环境请将 `auth_cookie_domain` 配置为 `.neofantasy.online`，使 `auth.neofantasy.online` 签发的 HttpOnly Cookie 能被 `api.neofantasy.online` 使用。
 
 ---
 

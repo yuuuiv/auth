@@ -31,3 +31,25 @@ class User(BaseModel):
     origin_data: Optional[dict] = Field(None, exclude=True)
     password: Optional[str] = Field(None, exclude=True)
     expire_at: float = 0
+
+
+class SessionLoginBody(BaseModel):
+    email: str
+    password: str
+
+
+class SessionRegisterBody(BaseModel):
+    email: str
+    password: str
+    code: str = ""
+    cf_token: str = ""
+
+
+class SessionVerifyCodeBody(BaseModel):
+    email: str
+    cf_token: str = ""
+
+
+class SessionExchangeBody(BaseModel):
+    app_id: str
+    code: str

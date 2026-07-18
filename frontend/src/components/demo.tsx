@@ -14,40 +14,32 @@ export function Demo({
     const { apiFetch } = UseApiClient()
     const [URLSearchParams] = useSearchParams();
     const { jwtSession, setJwtSession, appIdSession } = useGlobal();
-    const [user, setUser] = useState<Record<string, string>>({});
+    const [user, setUser] = useState<Record<string, unknown>>({});
     useEffect(() => {
-        const code = URLSearchParams.get("code");
         const fetchData = async () => {
-            if (!code && !jwtSession) {
-                return;
-            }
+            const code = URLSearchParams.get("code");
+            let activeToken = jwtSession;
             if (code) {
                 try {
-                    const { jwt } = await apiFetch<{
-                        jwt: string;
-                    }>("/api/token", {
+                    const exchanged = await apiFetch<{ access_token: string }>("/api/session/oauth-exchange", {
                         method: "POST",
-                        body: JSON.stringify({
-                            app_id: appIdSession || "demo",
-                            app_secret: "demo_secret",
-                            code: code,
-                        })
+                        body: JSON.stringify({ app_id: appIdSession || "demo", code }),
                     });
-                    setJwtSession(jwt);
+                    activeToken = exchanged.access_token;
+                    setJwtSession(activeToken);
+                    window.history.replaceState({}, "", "/user");
                 } catch (error) {
                     toast.error((error as Error).message || "登录失败");
                     return;
                 }
-                window.location.href = "/user";
+            }
+            if (!activeToken) {
                 return;
             }
             try {
-                const app_id = appIdSession || "demo";
-                const user_res = await apiFetch<
-                    Record<string, string>
-                >(`/api/info?app_id=${app_id}`, {
+                const user_res = await apiFetch<Record<string, unknown>>(`/api/session/me`, {
                     headers: {
-                        'Authorization': `Bearer ${jwtSession}`,
+                        'Authorization': `Bearer ${activeToken}`,
                         'Content-Type': 'application/json',
                     }
                 });

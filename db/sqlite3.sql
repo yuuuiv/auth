@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS awsl_users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     password TEXT NOT NULL,
-    active BOOLEAN DEFAULT 1
+    active BOOLEAN DEFAULT 1,
+    role TEXT NOT NULL DEFAULT 'user'
 );
 
 CREATE TABLE IF NOT EXISTS awsl_oauth_users (
