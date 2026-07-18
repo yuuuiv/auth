@@ -23,7 +23,11 @@ def auth_settings():
         "enabled_google": central_session_ready and bool(settings.google_client_id and settings.google_client_secret),
         "enabled_ms": central_session_ready and bool(settings.ms_client_id and settings.ms_client_secret),
         "enabled_web3": settings.enabled_web3_client,
-        "cf_turnstile_site_key": settings.cf_turnstile_site_key,
+        "cf_turnstile_site_key": (
+            settings.cf_turnstile_site_key
+            if settings.cf_turnstile_site_key and settings.cf_turnstile_secret_key
+            else ""
+        ),
         "temp_mail_bridge_enabled": temp_mail_bridge_configured(),
     }
 

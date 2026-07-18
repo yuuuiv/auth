@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     email_rate_limit_max_requests: int = 60
     cf_turnstile_site_key: str = ""
     cf_turnstile_secret_key: str = Field(default="", exclude=True)
+    cf_turnstile_allowed_hostnames: str = "neofantasy.online,auth-live-ten.vercel.app"
 
     # oauth settings
     google_client_id: str = ""
@@ -113,6 +114,13 @@ class Settings(BaseSettings):
             email.strip().lower()
             for email in self.admin_emails.split(",")
             if email.strip()
+        }
+
+    def get_turnstile_allowed_hostnames(self) -> set[str]:
+        return {
+            hostname.strip().lower().rstrip(".")
+            for hostname in self.cf_turnstile_allowed_hostnames.split(",")
+            if hostname.strip()
         }
 
 settings = Settings()

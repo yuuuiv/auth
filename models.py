@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -48,6 +48,7 @@ class SessionRegisterBody(BaseModel):
 class SessionVerifyCodeBody(BaseModel):
     email: str
     cf_token: str = ""
+    cf_action: Literal["email_register", "password_reset"] = "email_register"
 
 
 class SessionExchangeBody(BaseModel):

@@ -37,6 +37,14 @@ def _email(value: str) -> str:
     return normalized
 
 
+def _client_ip(request: Request) -> str:
+    for header in ("cf-connecting-ip", "x-real-ip", "x-forwarded-for"):
+        value = request.headers.get(header, "").split(",", 1)[0].strip()
+        if value:
+            return value
+    return request.client.host if request.client else ""
+
+
 def _db():
     if not settings.enabled_db:
         raise HTTPException(status_code=503, detail="Auth database is not configured")
@@ -97,8 +105,11 @@ def session_login(body: SessionLoginBody, request: Request, response: Response):
 def session_verify_code(body: SessionVerifyCodeBody, request: Request):
     email = _email(body.email)
     if settings.cf_turnstile_secret_key:
-        client_ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "127.0.0.1")
-        CloudFlareTurnstile.check(body.cf_token, client_ip)
+        CloudFlareTurnstile.check(
+            body.cf_token,
+            _client_ip(request),
+            expected_action=body.cf_action,
+        )
     token_client = TokenClientBase.get_client()
     existing = token_client.get_token(f"email_verify_code:{email}")
     if existing:
@@ -139,6 +150,29 @@ def session_register(body: SessionRegisterBody, request: Request, response: Resp
         raise HTTPException(status_code=500, detail="Failed to create account")
     token_client.store_token(f"email_verify_code:{email}", "", 1)
     row = _row_with_admin_role(row)
+    token, expires_at = issue_token(row)
+    _set_cookie(response, token, max(0, expires_at - int(time.time())))
+    return {"user": public_user(row), "access_token": token, "expires_at": expires_at}
+
+
+@router.post("/reset-password")
+def session_reset_password(body: SessionRegisterBody, response: Response):
+    email = _email(body.email)
+    if len(body.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must contain at least 8 characters")
+    token_client = TokenClientBase.get_client()
+    expected_code = token_client.get_token(f"email_verify_code:{email}")
+    if not settings.debug and (not expected_code or not body.code or expected_code != body.code):
+        raise HTTPException(status_code=400, detail="Verify code is invalid or expired")
+    db = _db()
+    row = db.get_user_by_email(email)
+    if not row:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if not row.get("active", True):
+        raise HTTPException(status_code=403, detail="Account is inactive")
+    db.update_password(email, hash_password(body.password))
+    token_client.store_token(f"email_verify_code:{email}", "", 1)
+    row = _row_with_admin_role(db.get_user_by_email(email) or row)
     token, expires_at = issue_token(row)
     _set_cookie(response, token, max(0, expires_at - int(time.time())))
     return {"user": public_user(row), "access_token": token, "expires_at": expires_at}

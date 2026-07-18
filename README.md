@@ -21,6 +21,7 @@
 |------|------|------|
 | `POST` | `/api/session/verify-code` | 校验 Turnstile 并发送注册验证码 |
 | `POST` | `/api/session/register` | 使用邮箱、密码和验证码创建账号并登录 |
+| `POST` | `/api/session/reset-password` | 使用邮箱验证码重置密码并登录 |
 | `POST` | `/api/session/login` | 邮箱密码登录 |
 | `GET` | `/api/session/me` | 获取当前会话用户和角色 |
 | `POST` | `/api/session/logout` | 清除会话 Cookie |
@@ -91,6 +92,7 @@ email_rate_limit_max_requests=60
 # Turnstile（可选）
 cf_turnstile_site_key=<可选>
 cf_turnstile_secret_key=<可选>
+cf_turnstile_allowed_hostnames=neofantasy.online,auth-live-ten.vercel.app
 
 # OAuth（可选）
 google_client_id=<可选>
