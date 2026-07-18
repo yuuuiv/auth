@@ -1,11 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/rabbit-logo.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neofantasy Live</title>
+  <meta name="theme-color" content="#c3dfe0" />
+  <script>
+    (() => {
+      const validThemes = new Set(['system', 'light', 'dark']);
+      const storedTheme = localStorage.getItem('nf-theme') || localStorage.getItem('vite-ui-theme');
+      const theme = validThemes.has(storedTheme) ? storedTheme : 'system';
+      const resolvedTheme = theme === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : theme;
+      document.documentElement.classList.add(resolvedTheme);
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.dataset.resolvedTheme = resolvedTheme;
+      document.documentElement.style.colorScheme = resolvedTheme;
+    })();
+  </script>
+  <meta name="description" content="NeoFantasy Live 统一身份认证" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>NeoFantasy Identity</title>
 </head>
 
 <body>

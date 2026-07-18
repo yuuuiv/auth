@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Link, useSearchParams } from "react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useGlobal } from "@/components/global-provider";
@@ -55,7 +55,8 @@ export function Demo({
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card>
                 <CardHeader className="text-center">
-                    <CardTitle className="text-xl">用户信息</CardTitle>
+                    <CardTitle>账号信息</CardTitle>
+                    <CardDescription>当前 NeoFantasy 身份会话</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {(user && Object.keys(user).length > 0) ?

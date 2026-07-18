@@ -4,7 +4,7 @@ import App from './App.tsx'
 import { ThemeProvider } from "@/components/theme-provider"
 
 createRoot(document.getElementById('root')!).render(
-  <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+  <ThemeProvider defaultTheme="system" storageKey="nf-theme">
     <App />
   </ThemeProvider>
 )

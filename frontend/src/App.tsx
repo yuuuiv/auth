@@ -2,47 +2,36 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { Toaster } from "@/components/ui/sonner"
 
 import { LoginForm } from "@/components/login-form"
-import { RegisterForm } from "@/components/register-form"
+import { RegisterForm, ResetPasswordForm } from "@/components/register-form"
 import { SiteHeader } from '@/components/site-header'
 import { GlobalProvider } from "@/components/global-provider";
 import { useTheme } from "@/components/theme-provider"
 import { Callback } from "@/components/callback";
 import { Demo } from "@/components/demo";
+import { AuthShell } from "@/components/auth-shell";
 
 
 export default function App() {
-  const { theme } = useTheme()
+  const { resolvedTheme } = useTheme()
   return (
     <GlobalProvider>
-      <div className="bg-muted w-full min-h-screen">
-        <Toaster richColors position="top-center" theme={theme} />
+      <div className="auth-page">
+        <Toaster richColors position="top-center" theme={resolvedTheme} />
+        <a className="skip-link" href="#main-content">跳到主要内容</a>
         <SiteHeader />
-        <div className="flex flex-col items-center justify-center gap-6 p-6 md:p-10">
-          <div className="flex w-full max-w-md flex-col gap-6">
-            <div className="rounded-2xl border bg-card/80 p-6 text-center shadow-sm backdrop-blur">
-              <div className="mx-auto mb-4 flex w-fit gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-[3px] bg-primary" />
-                <span className="h-2.5 w-2.5 rounded-[3px] bg-primary/70" />
-                <span className="h-2.5 w-2.5 rounded-[3px] bg-primary/40" />
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight">Neofantasy Live</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                统一身份登录，保护你的 Neofantasy Live 账户
-              </p>
-            </div>
-            <BrowserRouter>
+        <BrowserRouter>
+          <AuthShell>
               <Routes>
                 <Route index element={<LoginForm />} />
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/register" element={<RegisterForm />} />
-                <Route path="/reset_pass" element={<RegisterForm ResetPass={true} />} />
+                <Route path="/reset_pass" element={<ResetPasswordForm />} />
                 <Route path="/callback/:loginType" element={<Callback />} />
                 <Route path="/user" element={<Demo />} />
                 <Route path="/demo" element={<Demo />} />
               </Routes>
-            </BrowserRouter>
-          </div>
-        </div>
+          </AuthShell>
+        </BrowserRouter>
       </div>
     </GlobalProvider >
   )

@@ -17,9 +17,9 @@ interface FullScreenLoaderProps {
 export const FullScreenLoader = ({
     isLoading
 }: FullScreenLoaderProps) => {
-    const { theme } = useTheme()
+    const { resolvedTheme } = useTheme()
     if (!isLoading) return;
-    const themebg = theme === 'dark' ? 'bg-black' : 'bg-white';
+    const themebg = resolvedTheme === 'dark' ? 'bg-black' : 'bg-white';
     return (
         <div className={`fixed inset-0 flex items-center justify-center ${themebg} opacity-50`}>
             <LoadingSpinner className="h-8 w-8" />

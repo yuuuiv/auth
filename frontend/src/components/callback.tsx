@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -54,7 +54,8 @@ export function Callback({
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card>
                 <CardHeader className="text-center">
-                    <CardTitle className="text-xl">登录中</CardTitle>
+                    <CardTitle>正在连接账号</CardTitle>
+                    <CardDescription>请稍候，我们正在完成安全验证</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {failed ? (
@@ -69,7 +70,7 @@ export function Callback({
                     ) : (
                         <div className="flex flex-col items-center justify-center gap-2">
                             <p className="text-sm text-muted-foreground">
-                                正在通过 {loginType} 登录中...
+                                正在通过 {loginType} 登录…
                             </p>
                         </div>
                     )}
