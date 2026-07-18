@@ -61,4 +61,4 @@ class SessionOAuthCallbackBody(BaseModel):
     code: str
     state: str = ""
     redirect_url: str = ""
-    web3_account: str = ""
+    web3_account: Optional[str] = None

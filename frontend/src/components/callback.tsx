@@ -38,7 +38,7 @@ export function Callback({
             login_type: loginType,
             code,
             state,
-            web3_account: searchParams.get("web3_account"),
+            web3_account: searchParams.get("web3_account") || "",
             redirect_url: `${window.location.origin}${window.location.pathname}`
         };
         const loginApiCall = async () => {
