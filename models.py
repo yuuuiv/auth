@@ -53,3 +53,10 @@ class SessionVerifyCodeBody(BaseModel):
 class SessionExchangeBody(BaseModel):
     app_id: str
     code: str
+
+
+class SessionOAuthCallbackBody(BaseModel):
+    login_type: str
+    code: str
+    redirect_url: str = ""
+    web3_account: str = ""

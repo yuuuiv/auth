@@ -11,7 +11,7 @@ export function SiteHeader() {
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
                         ✉
                     </span>
-                    Temp Mail Auth
+                    Neofantasy Live
                 </span>
                 <div className="flex flex-1 items-center justify-end space-x-4">
                     <nav className="flex items-center space-x-1">

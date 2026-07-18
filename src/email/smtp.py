@@ -65,8 +65,8 @@ class SmtpMailClient(MailClientBase):
                 message = MIMEMultipart()
                 message['From'] = username
                 message['To'] = email
-                message['Subject'] = "Temp Mail Verify code (Temp Mail 验证码)"
-                message.attach(MIMEText(f"Your verify code is {code}", 'plain'))
+                message['Subject'] = "Neofantasy Live verification code（验证码）"
+                message.attach(MIMEText(f"Your Neofantasy Live verification code is {code}", 'plain'))
                 smtp.sendmail(username, email, message.as_string())
                 return
         except SMTPAuthenticationError as e:

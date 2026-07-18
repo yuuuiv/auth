@@ -1,5 +1,4 @@
 import logging
-import logging
 import re
 import secrets
 import time
@@ -9,7 +8,15 @@ import jwt
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from config import settings
-from models import SessionExchangeBody, SessionLoginBody, SessionRegisterBody, SessionVerifyCodeBody
+from models import (
+    OauthBody,
+    SessionExchangeBody,
+    SessionLoginBody,
+    SessionOAuthCallbackBody,
+    SessionRegisterBody,
+    SessionVerifyCodeBody,
+)
+from src.auth import AuthClientBase
 from src.cache.base import TokenClientBase
 from src.cf_turnstile import CloudFlareTurnstile
 from src.db.base import DBClientBase
@@ -160,6 +167,42 @@ def session_oauth_exchange(body: SessionExchangeBody, response: Response):
     email = _email(legacy_user.get("user_email") or legacy_user.get("user_name") or "")
     db = _db()
     row = db.get_user_by_email(email)
+    if not row:
+        role = "admin" if email in settings.get_admin_emails() else "user"
+        row = db.register_email_user(email, hash_password(secrets.token_urlsafe(32)), role)
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to create OAuth identity")
+    row = _row_with_admin_role(row)
+    token, expires_at = issue_token(row)
+    _set_cookie(response, token, max(0, expires_at - int(time.time())))
+    return {"user": public_user(row), "access_token": token, "expires_at": expires_at}
+
+
+@router.post("/oauth-callback")
+def session_oauth_callback(body: SessionOAuthCallbackBody, response: Response):
+    """Complete a first-party Google/GitHub login and issue the central session."""
+    if not body.code:
+        raise HTTPException(status_code=400, detail="OAuth code is required")
+    client = AuthClientBase.get_client(body.login_type)
+    try:
+        user = client.get_user(OauthBody(
+            app_id="neofantasy-live",
+            login_type=body.login_type,
+            code=body.code,
+            redirect_url=body.redirect_url,
+            web3_account=body.web3_account or None,
+        ))
+    except Exception as exc:
+        _logger.warning("OAuth callback failed for %s: %s", body.login_type, exc)
+        raise HTTPException(status_code=401, detail="OAuth login failed") from exc
+    if not user:
+        raise HTTPException(status_code=401, detail="OAuth identity not found")
+
+    email = _email(user.user_email or user.user_name or "")
+    db = _db()
+    row = db.get_user_by_email(email)
+    if row and not row.get("active", True):
+        raise HTTPException(status_code=403, detail="Account is inactive")
     if not row:
         role = "admin" if email in settings.get_admin_emails() else "user"
         row = db.register_email_user(email, hash_password(secrets.token_urlsafe(32)), role)

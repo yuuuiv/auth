@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useGlobal } from "@/components/global-provider";
 import { toast } from "sonner";
 import { UseApiClient } from "@/api";
 
@@ -15,7 +14,6 @@ export function Callback({
     const navigate = useNavigate()
     const { apiFetch } = UseApiClient()
     const [URLSearchParams] = useSearchParams();
-    const { appIdSession } = useGlobal();
     const [failed, setFailed] = useState(false);
     useEffect(() => {
         if (!loginType) {
@@ -24,7 +22,6 @@ export function Callback({
             return;
         }
         const reqBody = {
-            app_id: appIdSession || "demo",
             login_type: loginType,
             code: URLSearchParams.get("code"),
             web3_account: URLSearchParams.get("web3_account"),
@@ -33,30 +30,17 @@ export function Callback({
         const loginApiCall = async () => {
             try {
                 const response = await apiFetch<{
-                    code: string;
-                    redirect_url: string;
-                }>(`/api/oauth`, {
+                    access_token: string;
+                }>(`/api/session/oauth-callback`, {
                     method: "POST",
                     body: JSON.stringify(reqBody)
                 });
-                if (!response) {
+                if (!response?.access_token) {
                     setFailed(true);
                     toast.error(`登录失败 ${response}`);
                     return;
                 }
-                const { code, redirect_url } = response;
-                if (!code) {
-                    setFailed(true);
-                    toast.error(`登录失败 ${response}`);
-                    return;
-                }
-                if (redirect_url) {
-                    const url = new URL(redirect_url);
-                    url.searchParams.set("code", code);
-                    window.location.href = url.href;
-                    return;
-                }
-                navigate(`/user?code=${code}`);
+                navigate("/user");
             } catch (error) {
                 setFailed(true);
                 toast.error(`登录失败 ${(error as Error).message}`);

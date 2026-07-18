@@ -1,5 +1,6 @@
 import requests
 import logging
+from urllib.parse import urlencode
 
 from typing import Optional
 
@@ -10,12 +11,8 @@ from config import settings
 
 _logger = logging.getLogger(__name__)
 
-GITHUB_URL = "https://github.com/login/oauth/authorize?" \
-    f"client_id={settings.github_client_id}" \
-    "&scope=user:email"
-GITHUB_TOEKN_URL = "https://github.com/login/oauth/access_token" \
-    f"?client_id={settings.github_client_id}" \
-    f"&client_secret={settings.github_client_secret}"
+GITHUB_URL = "https://github.com/login/oauth/authorize"
+GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 GITHUB_USER_URL = "https://api.github.com/user"
 GITHUB_EMAIL_URL = "https://api.github.com/user/emails"
 
@@ -26,14 +23,26 @@ class GithubAuthClient(AuthClientBase):
 
     @classmethod
     def get_login_url(cls, redirect_url: str = "") -> str:
-        return GITHUB_URL
+        params = {
+            "client_id": settings.github_client_id,
+            "scope": "user:email",
+        }
+        if redirect_url:
+            params["redirect_uri"] = redirect_url
+        return f"{GITHUB_URL}?{urlencode(params)}"
 
     @classmethod
     def get_user(cls, oauth_body: OauthBody) -> Optional[User]:
         if not oauth_body.code:
             return None
         token_res = requests.post(
-            f"{GITHUB_TOEKN_URL}&code={oauth_body.code}",
+            GITHUB_TOKEN_URL,
+            data={
+                "client_id": settings.github_client_id,
+                "client_secret": settings.github_client_secret,
+                "code": oauth_body.code,
+                "redirect_uri": oauth_body.redirect_url or None,
+            },
             headers={"Accept": "application/json"}
         ).json()
         if not token_res.get('access_token'):

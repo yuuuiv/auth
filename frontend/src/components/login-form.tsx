@@ -118,8 +118,13 @@ export function LoginForm({
                                 Microsoft 登录
                             </Button>}
                         </div>
-                        <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-                        </div>
+                        {hasOauthProvider && settings.enabled_smtp && (
+                            <div className="relative flex items-center gap-3 text-center text-xs text-muted-foreground">
+                                <div className="h-px flex-1 bg-border" />
+                                <span>或使用第三方账号</span>
+                                <div className="h-px flex-1 bg-border" />
+                            </div>
+                        )}
                         {settings.enabled_smtp &&
                             <div>
                                 <div className="grid gap-6">

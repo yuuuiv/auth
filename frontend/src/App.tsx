@@ -25,9 +25,9 @@ export default function App() {
                 <span className="h-2.5 w-2.5 rounded-[3px] bg-primary/70" />
                 <span className="h-2.5 w-2.5 rounded-[3px] bg-primary/40" />
               </div>
-              <h1 className="text-3xl font-semibold tracking-tight">Temp Mail</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">Neofantasy Live</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                统一身份登录，保护你的临时邮箱账户
+                统一身份登录，保护你的 Neofantasy Live 账户
               </p>
             </div>
             <BrowserRouter>

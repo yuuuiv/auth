@@ -1,5 +1,6 @@
 import requests
 import logging
+from urllib.parse import urlencode
 
 from typing import Optional
 
@@ -10,10 +11,7 @@ from config import settings
 
 _logger = logging.getLogger(__name__)
 
-GOOGLE_URL = "https://accounts.google.com/o/oauth2/v2/auth?" \
-    "response_type=code" \
-    "&scope=https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile" \
-    f"&client_id={settings.google_client_id}"
+GOOGLE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOEKN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USER_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
 
@@ -24,14 +22,21 @@ class GoogleAuthClient(AuthClientBase):
 
     @classmethod
     def get_login_url(cls, redirect_url: str = "") -> str:
-        return f"{GOOGLE_URL}&redirect_uri={redirect_url}"
+        return f"{GOOGLE_URL}?{urlencode({
+            "response_type": "code",
+            "scope": "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+            "client_id": settings.google_client_id,
+            "redirect_uri": redirect_url,
+            "access_type": "online",
+            "prompt": "select_account",
+        })}"
 
     @classmethod
     def get_user(cls, oauth_body: OauthBody) -> Optional[User]:
         if not oauth_body.code:
             return None
         token_res = requests.post(
-            f"{GOOGLE_TOEKN_URL}?code={oauth_body.code}",
+            GOOGLE_TOEKN_URL,
             data={
                 'code': oauth_body.code,
                 'client_id': settings.google_client_id,
