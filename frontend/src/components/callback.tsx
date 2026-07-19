@@ -16,22 +16,21 @@ export function Callback({
     const { apiFetch } = UseApiClient()
     const { setJwtSession } = useGlobal();
     const [searchParams] = useSearchParams();
-    const [failed, setFailed] = useState(false);
-    const [failureMessage, setFailureMessage] = useState("登录失败，请重试");
     const requestStarted = useRef(false);
     const code = searchParams.get("code") || "";
     const state = searchParams.get("state") || "";
     const providerError = searchParams.get("error_description") || searchParams.get("error") || "";
+    const missingCallbackData = !loginType || !code || Boolean(providerError);
+    const initialFailureMessage = providerError ? `登录失败：${providerError}` : "登录回调缺少必要参数";
+    const [failed, setFailed] = useState(missingCallbackData);
+    const [failureMessage, setFailureMessage] = useState(missingCallbackData ? initialFailureMessage : "登录失败，请重试");
 
     useEffect(() => {
         if (requestStarted.current) return;
         requestStarted.current = true;
 
-        if (!loginType || !code || providerError) {
-            setFailed(true);
-            const message = providerError ? `登录失败：${providerError}` : "登录回调缺少必要参数";
-            setFailureMessage(message);
-            toast.error(message);
+        if (missingCallbackData) {
+            toast.error(initialFailureMessage);
             return;
         }
         const reqBody = {
@@ -71,7 +70,7 @@ export function Callback({
             }
         }
         void loginApiCall();
-    }, [apiFetch, code, loginType, navigate, providerError, searchParams, setJwtSession, state]);
+    }, [apiFetch, code, initialFailureMessage, loginType, missingCallbackData, navigate, providerError, searchParams, setJwtSession, state]);
 
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>

@@ -68,9 +68,9 @@ export function UseApiClient() {
                 const err = error as AxiosError;
                 const status = err.response?.status ?? err.status;
                 const detail = getErrorDetail(err.response?.data);
-                throw new Error(`[Error]${status ?? "Network"}: ${detail}`);
+                throw Object.assign(new Error(`[Error]${status ?? "Network"}: ${detail}`), { cause: error });
             } else {
-                throw new Error(`[Error]: ${error}`);
+                throw Object.assign(new Error(`[Error]: ${error}`), { cause: error });
             }
         } finally {
             setIsLoading(false);

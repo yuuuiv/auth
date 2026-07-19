@@ -60,7 +60,7 @@ class MemoryTokenClient(TokenClientBase):
             # add current timestamp
             cls.request_limit_map[key].append(cur_timestamp)
             req_count = len(cls.request_limit_map[key])
-            if req_count >= max_requests:
+            if req_count > max_requests:
                 raise HTTPException(
                     status_code=429, detail="Rate limit exceeded"
                 )

@@ -45,7 +45,9 @@ class Settings(BaseSettings):
     upstash_api_token: str = Field(default="", exclude=True)
     token_code_expire_seconds: int = 30
     auth_jwt_secret: str = Field(default="", exclude=True)
-    auth_token_expire_days: int = 30
+    # Keep sessions short enough that a leaked browser token has a bounded
+    # lifetime. Deployments can choose a shorter value through the environment.
+    auth_token_expire_days: int = 7
     auth_cookie_name: str = "nf_session"
     auth_cookie_domain: str = ""
     auth_issuer: str = "neofantasy-auth"
@@ -64,8 +66,12 @@ class Settings(BaseSettings):
     mail_client_type: str = "smtp"
     smtp_url: str = Field(default="", exclude=True)
     verify_code_expire_seconds: int = 120
-    email_rate_limit_timewindow_seconds: int = 60
-    email_rate_limit_max_requests: int = 60
+    email_rate_limit_timewindow_seconds: int = 300
+    email_rate_limit_max_requests: int = 3
+    login_rate_limit_timewindow_seconds: int = 300
+    login_rate_limit_max_requests: int = 10
+    verification_attempt_timewindow_seconds: int = 300
+    verification_attempt_max_requests: int = 5
     cf_turnstile_site_key: str = ""
     cf_turnstile_secret_key: str = Field(default="", exclude=True)
     cf_turnstile_allowed_hostnames: str = "neofantasy.online,auth-live-ten.vercel.app"

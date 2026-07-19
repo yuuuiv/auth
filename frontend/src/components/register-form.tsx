@@ -64,7 +64,8 @@ function EmailVerificationForm({
                 method: "POST",
                 body: JSON.stringify({
                     email: email,
-                    cf_token: token
+                    cf_token: token,
+                    cf_action: isResetPassword ? "password_reset" : "email_register",
                 })
             });
             if (res && res.timeout) {

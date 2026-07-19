@@ -28,7 +28,8 @@ from src.session import decode_token, issue_token, public_user, token_from_reque
 
 router = APIRouter(prefix="/api/session", tags=["Session"])
 _logger = logging.getLogger(__name__)
-_EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_EMAIL_REGEX = re.compile(r"^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$", re.IGNORECASE)
+_CODE_REGEX = re.compile(r"^\d{6}$")
 
 
 def _email(value: str) -> str:
@@ -43,13 +44,32 @@ def _client_ip(request: Request) -> str:
         value = request.headers.get(header, "").split(",", 1)[0].strip()
         if value:
             return value
-    return request.client.host if request.client else ""
+    return request.client.host if request.client and request.client.host else "unknown"
 
 
 def _db():
     if not settings.enabled_db:
         raise HTTPException(status_code=503, detail="Auth database is not configured")
     return DBClientBase.get_client()
+
+
+def _verification_key(email: str, purpose: str) -> str:
+    return f"email_verify_code:{purpose}:{email}"
+
+
+def _check_verification_code(token_client, email: str, code: str, purpose: str) -> None:
+    if settings.debug:
+        return
+    if not _CODE_REGEX.fullmatch(code or ""):
+        raise HTTPException(status_code=400, detail="Verify code is invalid or expired")
+    token_client.check_rate_limit(
+        f"email_verify_attempt:{purpose}:{email}",
+        settings.verification_attempt_timewindow_seconds,
+        settings.verification_attempt_max_requests,
+    )
+    expected = token_client.get_token(_verification_key(email, purpose))
+    if not expected or not secrets.compare_digest(str(expected), code):
+        raise HTTPException(status_code=400, detail="Verify code is invalid or expired")
 
 
 def _set_cookie(response: Response, token: str, max_age: int) -> None:
@@ -132,6 +152,17 @@ def session_login(body: SessionLoginBody, request: Request, response: Response):
     email = _email(body.email)
     if not body.password:
         raise HTTPException(status_code=400, detail="Password is required")
+    token_client = TokenClientBase.get_client()
+    token_client.check_rate_limit(
+        f"login:email:{email}",
+        settings.login_rate_limit_timewindow_seconds,
+        settings.login_rate_limit_max_requests,
+    )
+    token_client.check_rate_limit(
+        f"login:ip:{_client_ip(request)}",
+        settings.login_rate_limit_timewindow_seconds,
+        settings.login_rate_limit_max_requests,
+    )
     db = _db()
     row = db.get_user_by_email(email)
     if not row or not row.get("active", True) or not verify_password(row.get("password", ""), body.password):
@@ -155,20 +186,25 @@ def session_verify_code(body: SessionVerifyCodeBody, request: Request):
             expected_action=body.cf_action,
         )
     token_client = TokenClientBase.get_client()
-    existing = token_client.get_token(f"email_verify_code:{email}")
+    purpose = body.cf_action
+    code_key = _verification_key(email, purpose)
+    existing = token_client.get_token(code_key)
     if existing:
         raise HTTPException(status_code=400, detail="Verify code already sent")
     if not settings.enabled_smtp:
         raise HTTPException(status_code=503, detail="Email registration is disabled")
     token_client.check_rate_limit(
-        f"email_rate_limit:{email}",
+        f"email_rate_limit:email:{email}",
         settings.email_rate_limit_timewindow_seconds,
         settings.email_rate_limit_max_requests,
     )
-    import random
-    import string
-    code = "".join(random.choices(string.digits, k=6))
-    token_client.store_token(f"email_verify_code:{email}", code, settings.verify_code_expire_seconds)
+    token_client.check_rate_limit(
+        f"email_rate_limit:ip:{_client_ip(request)}",
+        settings.email_rate_limit_timewindow_seconds,
+        settings.email_rate_limit_max_requests,
+    )
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    token_client.store_token(code_key, code, settings.verify_code_expire_seconds)
     if settings.debug:
         _logger.info("Verification code generated for %s: %s", email, code)
     else:
@@ -182,9 +218,7 @@ def session_register(body: SessionRegisterBody, request: Request, response: Resp
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must contain at least 8 characters")
     token_client = TokenClientBase.get_client()
-    expected_code = token_client.get_token(f"email_verify_code:{email}")
-    if not settings.debug and (not expected_code or not body.code or expected_code != body.code):
-        raise HTTPException(status_code=400, detail="Verify code is invalid or expired")
+    _check_verification_code(token_client, email, body.code, "email_register")
     db = _db()
     if db.get_user_by_email(email):
         raise HTTPException(status_code=409, detail="Account already exists")
@@ -192,7 +226,7 @@ def session_register(body: SessionRegisterBody, request: Request, response: Resp
     row = db.register_email_user(email, hash_password(body.password), role) or db.get_user_by_email(email)
     if not row:
         raise HTTPException(status_code=500, detail="Failed to create account")
-    token_client.store_token(f"email_verify_code:{email}", "", 1)
+    token_client.store_token(_verification_key(email, "email_register"), "", 1)
     row = _row_with_admin_role(row)
     token, expires_at = issue_token(row)
     _set_cookie(response, token, max(0, expires_at - int(time.time())))
@@ -200,14 +234,12 @@ def session_register(body: SessionRegisterBody, request: Request, response: Resp
 
 
 @router.post("/reset-password")
-def session_reset_password(body: SessionRegisterBody, response: Response):
+def session_reset_password(body: SessionRegisterBody, request: Request, response: Response):
     email = _email(body.email)
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must contain at least 8 characters")
     token_client = TokenClientBase.get_client()
-    expected_code = token_client.get_token(f"email_verify_code:{email}")
-    if not settings.debug and (not expected_code or not body.code or expected_code != body.code):
-        raise HTTPException(status_code=400, detail="Verify code is invalid or expired")
+    _check_verification_code(token_client, email, body.code, "password_reset")
     db = _db()
     row = db.get_user_by_email(email)
     if not row:
@@ -215,7 +247,7 @@ def session_reset_password(body: SessionRegisterBody, response: Response):
     if not row.get("active", True):
         raise HTTPException(status_code=403, detail="Account is inactive")
     db.update_password(email, hash_password(body.password))
-    token_client.store_token(f"email_verify_code:{email}", "", 1)
+    token_client.store_token(_verification_key(email, "password_reset"), "", 1)
     row = _row_with_admin_role(db.get_user_by_email(email) or row)
     token, expires_at = issue_token(row)
     _set_cookie(response, token, max(0, expires_at - int(time.time())))

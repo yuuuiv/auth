@@ -1,5 +1,6 @@
 import datetime
 import logging
+import secrets
 from typing import Any
 
 import jwt
@@ -33,6 +34,7 @@ def issue_token(row: dict[str, Any]) -> tuple[str, int]:
         "email": row.get("user_email", ""),
         "name": row.get("user_name") or row.get("user_email", ""),
         "role": row.get("role", "user"),
+        "jti": secrets.token_urlsafe(18),
         "iat": int(now.timestamp()),
         "exp": int(expires_at.timestamp()),
     }
@@ -49,6 +51,8 @@ def decode_token(token: str) -> dict[str, Any]:
             algorithms=["HS256"],
             issuer=settings.auth_issuer,
             audience=settings.auth_audience,
+            options={"require": ["exp", "iat", "sub", "jti", "iss", "aud"]},
+            leeway=30,
         )
     except jwt.PyJWTError as exc:
         _logger.info("Invalid session token: %s", exc)

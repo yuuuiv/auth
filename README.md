@@ -89,8 +89,12 @@ upstash_api_token=<Upstash REST token>
 enabled_smtp=true
 smtp_url=smtps://<username>:<password>@<smtp-host>:465
 verify_code_expire_seconds=300
-email_rate_limit_timewindow_seconds=60
-email_rate_limit_max_requests=60
+email_rate_limit_timewindow_seconds=300
+email_rate_limit_max_requests=3
+login_rate_limit_timewindow_seconds=300
+login_rate_limit_max_requests=10
+verification_attempt_timewindow_seconds=300
+verification_attempt_max_requests=5
 
 # Turnstile（可选）
 cf_turnstile_site_key=<可选>
